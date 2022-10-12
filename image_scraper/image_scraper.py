@@ -3,13 +3,22 @@ from image_scraper.scrapers.scraper import Scraper
 
 
 class ImageScraper:
+    """Image information retrieval tool."""
+
     def __init__(self, website_data: dict[str, str | int], scraper: Scraper):
-        self.image_source = self.prepare_images_source(website_data)
+        self.image_source = self.create_images_source(website_data)
         self.scraper = scraper
         self._synchronization_data = []
 
     @staticmethod
-    def prepare_images_source(website_data: dict[str, str | int]) -> ImagesSource:
+    def create_images_source(website_data: dict[str, str | int]) -> ImagesSource:
+        """Uses website data to create ImagesSource object.
+
+        Args:
+            website_data: dict containing: website_url, container_class,
+                pagination_class, pages_to_scan keys.
+
+        Returns: ImagesSource object based on website data."""
         return ImagesSource(
             current_url_address=website_data["website_url"],
             container_class=website_data["container_class"],
@@ -17,7 +26,9 @@ class ImageScraper:
             pages_to_scan=website_data["pages_to_scan"],
         )
 
-    def start_sync(self):
+    def start_sync(self) -> None:
+        """Initiates the synchronization process, collecting the data of the images
+        searched according to the provided guidelines."""
         images_data = set()
         scraped_urls = {
             self.image_source.current_url_address,
@@ -42,5 +53,7 @@ class ImageScraper:
 
     @synchronization_data.setter
     def synchronization_data(self, images: set[Image]) -> None:
+        """Converts a set of Image objects into a list of dictionaries and append it
+        into synchronization data."""
         for image in images:
             self._synchronization_data.append(image.as_dict)

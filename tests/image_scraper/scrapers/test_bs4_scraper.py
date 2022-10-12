@@ -8,28 +8,36 @@ from image_scraper.scrapers.bs4_scraper import Bs4Scraper
 from image_scraper.models import Image, ImagesSource
 
 
+@pytest.fixture(scope="session")
+def prepare_beautiful_soup(prepare_html_doc) -> BeautifulSoup:
+    """Prepares the BeautifulSoup object based on prepare_html_doc fixture."""
+    yield BeautifulSoup(prepare_html_doc, "html.parser")
+
+
 @pytest.mark.unittests
 class TestGetImagesData:
     def test_find_image_holders_and_prepare_image_objects_should_be_called(
-        self, mocker: MockerFixture, prepare_image_source
+        self,
+        mocker: MockerFixture,
+        prepare_images_source: ImagesSource,
+        prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
-        find_image_holders_mock = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.find_image_holders"
+        get_html_dom_mock = mocker.patch(
+            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
-        image_holders = "webludus.pl"
-        find_image_holders_mock.return_value = image_holders
+        get_html_dom_mock.return_value = prepare_beautiful_soup
         prepare_image_objects = mocker.patch(
             "image_scraper.scrapers.bs4_scraper.Bs4Scraper.prepare_image_objects"
         )
 
-        Bs4Scraper().get_images_data(image_source=prepare_image_source)
+        Bs4Scraper().get_images_data(image_source=prepare_images_source)
 
-        find_image_holders_mock.assert_called_once_with(
-            prepare_image_source.current_url_address,
-            prepare_image_source.container_class,
+        get_html_dom_mock.assert_called_once_with(
+            prepare_images_source.current_url_address
         )
         prepare_image_objects.assert_called_once_with(
-            prepare_image_source.domain, image_holders
+            prepare_images_source.domain,
+            prepare_beautiful_soup.select("." + prepare_images_source.container_class),
         )
 
 
@@ -37,98 +45,74 @@ class TestGetImagesData:
 class TestGetHtmlDom:
     def test_request_get_should_be_called(
         self,
-        prepare_image_source,
+        prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
     ) -> None:
         images_source_website = mocked_responses.get(
-            prepare_image_source.current_url_address
+            prepare_images_source.current_url_address
         )
 
-        Bs4Scraper.get_html_dom(prepare_image_source.current_url_address)
+        Bs4Scraper._get_html_dom(prepare_images_source.current_url_address)
 
         assert images_source_website.call_count == 1
 
     def test_return_value_should_be_beautiful_soup_object(
         self,
-        prepare_image_source,
+        prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
-        html_doc: str,
+        prepare_html_doc,
     ) -> None:
-        mocked_responses.get(prepare_image_source.current_url_address, body=html_doc)
+        mocked_responses.get(
+            prepare_images_source.current_url_address, body=prepare_html_doc
+        )
 
-        beautiful_soup = Bs4Scraper.get_html_dom(
-            prepare_image_source.current_url_address
+        beautiful_soup = Bs4Scraper._get_html_dom(
+            prepare_images_source.current_url_address
         )
 
         assert isinstance(beautiful_soup, BeautifulSoup)
-
-
-@pytest.mark.unittests
-class TestFindImageHolders:
-    def test_return_value_should_have_proper_type_and_length(
-        self,
-        mocker: MockerFixture,
-        prepare_image_source,
-        prepare_beautiful_soup,
-    ) -> None:
-        get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.get_html_dom"
-        )
-        get_html_dom.return_value = prepare_beautiful_soup
-
-        image_holders = Bs4Scraper().find_image_holders(
-            prepare_image_source.current_url_address,
-            prepare_image_source.container_class,
-        )
-
-        assert isinstance(image_holders, ResultSet)
-        assert len(image_holders) == 2
 
 
 @pytest.mark.integtests
 class TestPrepareImageObjects:
     @pytest.fixture
     def prepare_image_holders(
-        self,
-        mocker: MockerFixture,
-        prepare_beautiful_soup,
-        prepare_image_source,
+        self, prepare_beautiful_soup: BeautifulSoup, prepare_images_source: ImagesSource
     ) -> ResultSet:
-        get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.get_html_dom"
-        )
-        get_html_dom.return_value = prepare_beautiful_soup
-
-        image_holders = Bs4Scraper().find_image_holders(
-            prepare_image_source.current_url_address,
-            prepare_image_source.container_class,
-        )
-
-        yield image_holders
+        """Prepares a ResultSet containing all of divs that have image inside.
+        For this, it uses prepare_beautiful_soup and prepare_images_source fixture."""
+        yield prepare_beautiful_soup.select("." + prepare_images_source.container_class)
 
     def test_output_should_be_in_correct_type(
-        self, prepare_image_holders: ResultSet, prepare_image_source: ImagesSource
+        self, prepare_image_holders: ResultSet, prepare_images_source: ImagesSource
     ) -> None:
         images = Bs4Scraper().prepare_image_objects(
-            prepare_image_source.current_url_address, prepare_image_holders
+            prepare_images_source.current_url_address, prepare_image_holders
         )
 
-        assert len(images) == 1
+        assert len(images) == 2
         assert isinstance(images, set)
         assert isinstance(list(images)[0], Image)
 
     def test_output_should_have_correct_data(
-        self, prepare_image_holders: ResultSet, prepare_image_source: ImagesSource
+        self,
+        prepare_image_holders: ResultSet,
+        prepare_images_source: ImagesSource,
     ) -> None:
         expected_images = {
             Image(
-                source="https://webludus.pl",
+                source="https://webludus.pl/00",
                 url_address="https://webludus.pl/img/image.jpg",
                 title="Imagocms",
-            )
+            ),
+            Image(
+                source="https://webludus.pl/01",
+                url_address="https://webludus.pl/img/image01.jpg",
+                title="Image 01",
+            ),
         }
         images = Bs4Scraper().prepare_image_objects(
-            prepare_image_source.current_url_address, prepare_image_holders
+            prepare_images_source.current_url_address, prepare_image_holders
         )
         assert images == expected_images
 
@@ -141,45 +125,46 @@ class TestFindImageData:
                                 </div>"""
         soup = BeautifulSoup(div_data, "html.parser")
         div = soup.div
-        assert Bs4Scraper().find_image_data(div, "https://webludus.pl") is None
+        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl") is None
 
     def test_in_case_of_type_error_return_none(self) -> None:
         div_data = """<div class="simple-image"></div>"""
         soup = BeautifulSoup(div_data, "html.parser")
         div = soup.div
-        assert Bs4Scraper().find_image_data(div, "https://webludus.pl") is None
+        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl") is None
 
 
 @pytest.mark.integtests
 class TestFindNextPage:
     def test_output_should_have_correct_value(
         self,
-        prepare_image_source: ImagesSource,
+        prepare_images_source: ImagesSource,
         mocker: MockerFixture,
-        prepare_beautiful_soup,
+        prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
         get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.get_html_dom"
+            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = prepare_beautiful_soup
 
         next_url, scraped_urls = Bs4Scraper().find_next_page(
-            prepare_image_source.current_url_address,
-            prepare_image_source.domain,
-            prepare_image_source.pagination_class,
+            prepare_images_source.current_url_address,
+            prepare_images_source.domain,
+            prepare_images_source.pagination_class,
             set(),
         )
 
         assert next_url == "https://webludus.pl/page/2"
         assert scraped_urls == {
             "https://webludus.pl",
-            "https://webludus.pl#",
+            "https://webludus.pl/",
+            "https://webludus.pl/#",
             "https://webludus.pl/random",
             "https://webludus.pl/page/1",
         }
 
     def test_if_reach_index_6_in_pagination_div_raise_index_error(
-        self, mocker: MockerFixture, prepare_image_source: ImagesSource
+        self, mocker: MockerFixture, prepare_images_source: ImagesSource
     ) -> None:
         html_doc = """
         <div class="pagination">
@@ -191,15 +176,15 @@ class TestFindNextPage:
             <a href="https://webludus.pl/page/1">1</a>
         </div>"""
         get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.get_html_dom"
+            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = BeautifulSoup(html_doc, "html.parser")
 
         with pytest.raises(IndexError):
             Bs4Scraper().find_next_page(
-                prepare_image_source.current_url_address,
-                prepare_image_source.domain,
-                prepare_image_source.pagination_class,
+                prepare_images_source.current_url_address,
+                prepare_images_source.domain,
+                prepare_images_source.pagination_class,
                 set(),
             )
 
@@ -237,34 +222,34 @@ class TestIsThisReallyTheNextPage:
     scraped = {domain}
 
     def test_false_if_new_url_is_in_scraped_urls(self) -> None:
-        assert not Bs4Scraper().is_this_really_the_next_page(
+        assert not Bs4Scraper()._is_this_really_the_next_page(
             self.domain, self.domain, self.scraped
         )
 
     def test_false_if_number_sign_is_in_new_url(self) -> None:
         new_url = "https://webludus.pl#"
 
-        assert not Bs4Scraper().is_this_really_the_next_page(
+        assert not Bs4Scraper()._is_this_really_the_next_page(
             self.domain, new_url, self.scraped
         )
 
     def test_false_if_ordinal_number_is_less_than_two(self) -> None:
         new_url = "https://webludus.pl/page/1"
 
-        assert not Bs4Scraper().is_this_really_the_next_page(
+        assert not Bs4Scraper()._is_this_really_the_next_page(
             self.domain, new_url, self.scraped
         )
 
     def test_false_if_next_url_does_not_have_ordinal_number(self) -> None:
         new_url = "https://webludus.pl/page/one"
 
-        assert not Bs4Scraper().is_this_really_the_next_page(
+        assert not Bs4Scraper()._is_this_really_the_next_page(
             self.domain, new_url, self.scraped
         )
 
     def test_true_if_next_url_is_ok(self) -> None:
         new_url = "https://webludus.pl/page/2"
 
-        assert Bs4Scraper().is_this_really_the_next_page(
+        assert Bs4Scraper()._is_this_really_the_next_page(
             self.domain, new_url, self.scraped
         )
