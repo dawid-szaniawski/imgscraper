@@ -90,7 +90,7 @@ def prepare_second_html_doc() -> str:
     <body>
         <div class="simple-image">
             <a href="https://webludus.pl/02">
-                <img src="https://webludus.pl/img/image02.jpg" alt="Image 02">
+                <img src="/img/image02.jpg" alt="Image 02">
             </a>
         </div>
     </body></html>"""

@@ -123,7 +123,7 @@ class Bs4Scraper(Scraper):
 
     @staticmethod
     def add_domain_into_url_address(domain: str, item_url: str) -> str:
-        """Adds domain if not present in URL address.
+        """Adds domain if not present in URL address and deletes double slashes.
 
         Args:
             domain: string containing a domain of the scraped website.
@@ -135,6 +135,9 @@ class Bs4Scraper(Scraper):
             return item_url
         elif "https://" in item_url or "http://" in item_url:
             return item_url
+        item_url.replace("//", "/")
+        if item_url[0] == "/":
+            item_url = item_url[1:]
         return str(domain + item_url)
 
     @staticmethod

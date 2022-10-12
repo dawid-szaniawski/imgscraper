@@ -213,7 +213,7 @@ class TestAddDomainIntoURLAddress:
 
         bs4_url = Bs4Scraper().add_domain_into_url_address(domain, new_url)
 
-        assert bs4_url == domain + new_url
+        assert bs4_url == domain + new_url[1:]
 
 
 @pytest.mark.unittests
