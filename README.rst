@@ -1,6 +1,6 @@
 Image_Scraper: yet another web scraper
 ====================================================
-.. image:: https://github.com/dawid-szaniawski/image_scraper/workflows/tests/badge.svg
+.. image:: https://github.com/dawid-szaniawski/image_scraper/workflows/tests.yml/badge.svg
    :target: https://github.com/dawid-szaniawski/image_scraper/actions
 
 Image_Scraper is a simple library that allows you to retrieve image information from meme sites.
