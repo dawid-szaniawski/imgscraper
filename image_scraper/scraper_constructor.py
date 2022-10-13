@@ -13,7 +13,7 @@ def create_image_scraper(
     pagination_class: str,
     pages_to_scan: int,
     scraper: str,
-):
+) -> ImageScraper:
     if scraper in SCRAPERS:
         return ImageScraper(
             website_url=website_url,
