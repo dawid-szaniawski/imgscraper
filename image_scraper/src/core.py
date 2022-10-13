@@ -1,5 +1,5 @@
-from image_scraper.models import ImagesSource, Image
-from image_scraper.scrapers.scraper import Scraper
+from image_scraper.src.models import ImagesSource, Image
+from image_scraper.src.scrapers.scraper import Scraper
 
 
 class ImageScraper:

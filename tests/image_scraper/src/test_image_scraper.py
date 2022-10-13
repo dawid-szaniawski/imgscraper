@@ -4,9 +4,9 @@ import pytest
 import responses
 from freezegun import freeze_time
 
-from image_scraper.image_scraper import ImageScraper
-from image_scraper.scrapers import scraper, bs4_scraper
-from image_scraper.models import ImagesSource, Image
+from image_scraper.src.core import ImageScraper
+from image_scraper.src.scrapers import scraper, bs4_scraper
+from image_scraper.src.models import ImagesSource, Image
 
 
 @pytest.fixture

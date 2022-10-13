@@ -3,7 +3,7 @@ from datetime import datetime
 from pytest import fixture
 from responses import RequestsMock
 
-from image_scraper.models import ImagesSource, Image
+from image_scraper.src.models import ImagesSource, Image
 
 
 FAKE_TIME: datetime = datetime(2022, 10, 12, 14, 28, 21, 720446)

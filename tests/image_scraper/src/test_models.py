@@ -1,6 +1,6 @@
 from pytest import mark
 
-from image_scraper.models import ImagesSource, Image
+from image_scraper.src.models import ImagesSource, Image
 
 
 @mark.unittests

@@ -16,15 +16,14 @@ ____
 
 .. code-block:: python
 
-    from image_scraper.image_scraper import ImageScraper
-    from image_scraper.scrapers.bs4_scraper import Bs4Scraper
+    from image_scraper.scraper_constructor import create_image_scraper
 
-    img_scraper = ImageScraper(
+    img_scraper = create_image_scraper(
         website_url="https://imagocms.webludus.pl/",
         container_class="image-holder",
         pagination_class="pagination",
         pages_to_scan=3,
-        scraper=Bs4Scraper()
+        scraper="bs4"
     )
 
     img_scraper.start_sync()
