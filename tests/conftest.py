@@ -22,14 +22,14 @@ def mocked_responses() -> RequestsMock:
         yield response
 
 
-@fixture(scope="class")
+@fixture(scope="session")
 def prepare_website_data() -> tuple[str, str, str, int]:
     return WEBSITE_URL, CONTAINER_CLASS, PAGINATION_CLASS, PAGES_TO_SCAN
 
 
-@fixture
+@fixture(scope="session")
 def prepare_image_model_data() -> dict[str, str | datetime]:
-    return {
+    yield {
         "source": WEBSITE_URL,
         "url_address": IMAGE_URL,
         "title": TITLE,
@@ -47,7 +47,7 @@ def prepare_images_source() -> ImagesSource:
     )
 
 
-@fixture
+@fixture(scope="session")
 def prepare_image(prepare_image_model_data) -> Image:
     yield Image(
         source=WEBSITE_URL, url_address=IMAGE_URL, title=TITLE, created_at=FAKE_TIME
