@@ -79,4 +79,4 @@ To install Image_Scraper, simply:
 
 .. code-block:: bash
 
-    $ pip install https://github.com/dawid-szaniawski/image_scraper
+    $ pip install git+https://github.com/dawid-szaniawski/image_scraper
