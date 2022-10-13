@@ -115,7 +115,11 @@ class Bs4Scraper(Scraper):
             scraped_urls.add(next_url)
             next_url_index += 1
             if next_url_index > 5:
-                raise IndexError("Couldn't find the URL of the next subpage.")
+                message = (
+                    "Couldn't find the URL of the next subpage.\n"
+                    f"Scraped URLs: {scraped_urls}\nCurrent URL: {next_url}"
+                )
+                raise IndexError(message)
             next_url = self.add_domain_into_url_address(
                 domain,
                 pagination_div.find_all("a")[next_url_index]["href"],
