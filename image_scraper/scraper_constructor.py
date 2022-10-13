@@ -12,7 +12,7 @@ def create_image_scraper(
     container_class: str,
     pagination_class: str,
     pages_to_scan: int,
-    scraper: str = "bs4"
+    scraper: str = "bs4",
 ) -> ImageScraper:
     """Constructor for the ImageScraper object. Imports scrapers and delivers them to
     ImageScraper based on the information in the scraper variable.

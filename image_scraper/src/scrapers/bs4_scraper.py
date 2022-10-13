@@ -163,6 +163,7 @@ class Bs4Scraper(Scraper):
             return False
         else:
             try:
-                return True if int(new_url[-1]) > 1 else False
+                page_number = new_url.split("/")[-1]
+                return True if int(page_number) > 1 else False
             except ValueError:
                 return False
