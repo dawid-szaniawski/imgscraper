@@ -7,8 +7,8 @@ from pytest_mock import MockerFixture
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet
 
-from image_scraper.scrapers.bs4_scraper import Bs4Scraper
-from image_scraper.models import Image, ImagesSource
+from image_scraper.src.scrapers.bs4_scraper import Bs4Scraper
+from image_scraper.src.models import Image, ImagesSource
 
 
 @pytest.fixture(scope="session")
@@ -26,11 +26,11 @@ class TestGetImagesData:
         prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
         get_html_dom_mock = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom_mock.return_value = prepare_beautiful_soup
         prepare_image_objects = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper.prepare_image_objects"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper.prepare_image_objects"
         )
 
         Bs4Scraper().get_images_data(image_source=prepare_images_source)
@@ -172,7 +172,7 @@ class TestFindNextPage:
         prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
         get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = prepare_beautiful_soup
 
@@ -205,7 +205,7 @@ class TestFindNextPage:
             <a href="https://webludus.pl/page/1">1</a>
         </div>"""
         get_html_dom = mocker.patch(
-            "image_scraper.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = BeautifulSoup(html_doc, "html.parser")
 

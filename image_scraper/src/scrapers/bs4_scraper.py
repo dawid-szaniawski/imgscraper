@@ -4,8 +4,8 @@ from requests import get
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet, Tag
 
-from image_scraper.models import ImagesSource, Image
-from image_scraper.scrapers.scraper import Scraper
+from image_scraper.src.models import ImagesSource, Image
+from image_scraper.src.scrapers.scraper import Scraper
 
 
 class Bs4Scraper(Scraper):
