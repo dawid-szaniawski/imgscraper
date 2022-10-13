@@ -93,7 +93,6 @@ class TestPrepareImageObjects:
             prepare_images_source.current_url_address, prepare_image_holders
         )
 
-        assert len(images) == 2
         assert isinstance(images, set)
         assert isinstance(list(images)[0], Image)
 
