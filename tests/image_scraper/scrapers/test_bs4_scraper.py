@@ -1,5 +1,8 @@
+from datetime import datetime
+
 import pytest
 import responses
+from freezegun import freeze_time
 from pytest_mock import MockerFixture
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet
@@ -99,21 +102,25 @@ class TestPrepareImageObjects:
         prepare_image_holders: ResultSet,
         prepare_images_source: ImagesSource,
     ) -> None:
+        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
         expected_images = {
             Image(
                 source="https://webludus.pl/00",
                 url_address="https://webludus.pl/img/image.jpg",
-                title="Imagocms",
+                title="Webludus",
+                created_at=creation_time,
             ),
             Image(
                 source="https://webludus.pl/01",
                 url_address="https://webludus.pl/img/image01.jpg",
                 title="Image 01",
+                created_at=creation_time,
             ),
         }
-        images = Bs4Scraper().prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders
-        )
+        with freeze_time(creation_time):
+            images = Bs4Scraper().prepare_image_objects(
+                prepare_images_source.current_url_address, prepare_image_holders
+            )
         assert images == expected_images
 
 

@@ -3,28 +3,32 @@ from image_scraper.scrapers.scraper import Scraper
 
 
 class ImageScraper:
-    """Image information retrieval tool."""
+    """Image information retrieval tool.
 
-    def __init__(self, website_data: dict[str, str | int], scraper: Scraper):
-        self.image_source = self.create_images_source(website_data)
-        self.scraper = scraper
-        self._synchronization_data = []
+    Args:
+        website_url:
+        container_class:
+        pagination_class:
+        pages_to_scan:
+        scraper:
+    """
 
-    @staticmethod
-    def create_images_source(website_data: dict[str, str | int]) -> ImagesSource:
-        """Uses website data to create ImagesSource object.
-
-        Args:
-            website_data: dict containing: website_url, container_class,
-                pagination_class, pages_to_scan keys.
-
-        Returns: ImagesSource object based on website data."""
-        return ImagesSource(
-            current_url_address=website_data["website_url"],
-            container_class=website_data["container_class"],
-            pagination_class=website_data["pagination_class"],
-            pages_to_scan=website_data["pages_to_scan"],
+    def __init__(
+        self,
+        website_url: str,
+        container_class: str,
+        pagination_class: str,
+        pages_to_scan: int,
+        scraper: Scraper,
+    ) -> None:
+        self.image_source = ImagesSource(
+            current_url_address=website_url,
+            container_class=container_class,
+            pagination_class=pagination_class,
+            pages_to_scan=pages_to_scan,
         )
+        self.scraper = scraper
+        self._synchronization_data: list[Image] = []
 
     def start_sync(self) -> None:
         """Initiates the synchronization process, collecting the data of the images
@@ -45,15 +49,14 @@ class ImageScraper:
                 )
                 self.image_source.current_url_address, scraped_urls = next_page_data
             self.image_source.pages_to_scan -= 1
-        self.synchronization_data = images_data
+        self.synchronization_data = list(images_data)
 
     @property
-    def synchronization_data(self) -> list[dict]:
+    def synchronization_data(self) -> list[Image]:
         return self._synchronization_data
 
     @synchronization_data.setter
-    def synchronization_data(self, images: set[Image]) -> None:
+    def synchronization_data(self, images: list[Image]) -> None:
         """Converts a set of Image objects into a list of dictionaries and append it
         into synchronization data."""
-        for image in images:
-            self._synchronization_data.append(image.as_dict)
+        self._synchronization_data.extend(images)

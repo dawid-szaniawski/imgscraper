@@ -1,4 +1,5 @@
 from dataclasses import dataclass, asdict
+from datetime import datetime
 
 
 @dataclass
@@ -17,6 +18,7 @@ class Image:
     source: str
     url_address: str
     title: str
+    created_at: datetime
 
     @property
     def as_dict(self):

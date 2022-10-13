@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from requests import get
 from bs4 import BeautifulSoup
 from bs4.element import ResultSet, Tag
@@ -72,8 +74,12 @@ class Bs4Scraper(Scraper):
             image_src = self.add_domain_into_url_address(domain, image["src"])
             if image_src[-4] == "." or image_src[-5] == ".":
                 return Image(
-                    source=image_source, url_address=image_src, title=image["alt"]
+                    source=image_source,
+                    url_address=image_src,
+                    title=image["alt"],
+                    created_at=datetime.now(),
                 )
+            return None
         except TypeError:
             return None
         except KeyError:

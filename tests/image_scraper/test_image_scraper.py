@@ -1,5 +1,7 @@
 import pytest
 import responses
+from freezegun import freeze_time
+from datetime import datetime
 
 from image_scraper.image_scraper import ImageScraper
 from image_scraper.scrapers import scraper, bs4_scraper
@@ -8,7 +10,7 @@ from image_scraper.models import ImagesSource, Image
 
 @pytest.fixture
 def prepare_image_scraper(
-    prepare_website_data: dict[str, str | int], prepare_image
+    prepare_website_data: tuple[str, str, str, int], prepare_image
 ) -> ImageScraper:
     """Returns a mocker of the class inheriting from the Scraper. It contains mocks of
     the basic function of the scraper implementation."""
@@ -55,7 +57,14 @@ def prepare_image_scraper(
                 "https://webludus.pl",
             }
 
-    yield ImageScraper(prepare_website_data, ScraperMocker())
+    website_url, container_cls, pagination_cls, pages = prepare_website_data
+    yield ImageScraper(
+        website_url=website_url,
+        container_class=container_cls,
+        pagination_class=pagination_cls,
+        pages_to_scan=pages,
+        scraper=ScraperMocker(),
+    )
 
 
 @pytest.mark.unittests
@@ -73,11 +82,11 @@ class TestStartSync:
     def test_synchronization_process(
         self,
         prepare_image_scraper: ImageScraper,
-        prepare_image_model_data: dict[str, str],
+        prepare_image: Image,
     ) -> None:
         prepare_image_scraper.start_sync()
 
-        assert prepare_image_scraper.synchronization_data == [prepare_image_model_data]
+        assert prepare_image_scraper.synchronization_data == [prepare_image]
 
 
 @pytest.mark.integtests
@@ -90,56 +99,63 @@ class TestSynchronizationDataSetter:
         prepare_image_scraper.synchronization_data = images
 
         assert isinstance(prepare_image_scraper.synchronization_data, list)
-        assert isinstance(prepare_image_scraper.synchronization_data[0], dict)
-        assert prepare_image_scraper.synchronization_data[0] == prepare_image.as_dict
+        assert isinstance(prepare_image_scraper.synchronization_data[0], Image)
+        assert prepare_image_scraper.synchronization_data[0] == prepare_image
 
 
 @pytest.mark.integtests
 class TestImageScraper:
     def test_synchronization_data_should_be_correct(
         self,
-        prepare_website_data: dict[str, str | int],
+        prepare_website_data: tuple[str, str, str, int],
         mocked_responses: responses.RequestsMock,
         prepare_html_doc: str,
         prepare_second_html_doc: str,
     ):
+        website_url, container_class, pagination_class, pages = prepare_website_data
         images_source_website_page_1 = mocked_responses.get(
-            prepare_website_data["website_url"], body=prepare_html_doc
+            website_url, body=prepare_html_doc
         )
         images_source_website_page_2 = mocked_responses.get(
-            prepare_website_data["website_url"] + "page/2", body=prepare_html_doc
+            website_url + "page/2", body=prepare_html_doc
         )
         images_source_website_page_3 = mocked_responses.get(
-            prepare_website_data["website_url"] + "page/3", body=prepare_second_html_doc
+            website_url + "page/3", body=prepare_second_html_doc
         )
-        expected_sync_data = sorted(
-            [
-                {
-                    "source": "https://webludus.pl/00",
-                    "title": "Imagocms",
-                    "url_address": "https://webludus.pl/img/image.jpg",
-                },
-                {
-                    "source": "https://webludus.pl/01",
-                    "title": "Image 01",
-                    "url_address": "https://webludus.pl/img/image01.jpg",
-                },
-                {
-                    "source": "https://webludus.pl/02",
-                    "title": "Image 02",
-                    "url_address": "https://webludus.pl/img/image02.jpg",
-                },
-            ],
-            key=lambda image: image["source"],
+        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
+        expected_sync_data = [
+                Image(
+                    source="https://webludus.pl/00",
+                    title="Webludus",
+                    url_address="https://webludus.pl/img/image.jpg",
+                    created_at=creation_time
+                ),
+                Image(
+                    source="https://webludus.pl/01",
+                    title="Image 01",
+                    url_address="https://webludus.pl/img/image01.jpg",
+                    created_at=creation_time
+                ),
+                Image(
+                    source="https://webludus.pl/02",
+                    title="Image 02",
+                    url_address="https://webludus.pl/img/image02.jpg",
+                    created_at=creation_time
+                )
+            ]
+        image_scraper = ImageScraper(
+            website_url=website_url,
+            container_class=container_class,
+            pagination_class=pagination_class,
+            pages_to_scan=pages,
+            scraper=bs4_scraper.Bs4Scraper(),
         )
 
-        image_scraper = ImageScraper(prepare_website_data, bs4_scraper.Bs4Scraper())
-        image_scraper.start_sync()
-        sync_data = sorted(
-            image_scraper.synchronization_data, key=lambda image: image["source"]
-        )
+        with freeze_time(creation_time):
+            image_scraper.start_sync()
 
         assert images_source_website_page_1.call_count == 2
         assert images_source_website_page_2.call_count == 2
         assert images_source_website_page_3.call_count == 1
-        assert expected_sync_data == sync_data
+        assert len(image_scraper.synchronization_data) == len(expected_sync_data)
+        assert set(image_scraper.synchronization_data) == set(expected_sync_data)
