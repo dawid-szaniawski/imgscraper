@@ -1,6 +1,6 @@
 Image_Scraper: yet another web scraper
 ====================================================
-.. image:: https://github.com/dawid-szaniawski/image_scraper/actions/workflows/tests.yml/badge.svg
+.. image:: https://github.com/dawid-szaniawski/image_scraper/actions/workflows/tox_tests.yml/badge.svg
    :target: https://github.com/dawid-szaniawski/image_scraper/actions
 .. image:: https://www.codefactor.io/repository/github/dawid-szaniawski/image_scraper/badge
    :target: https://www.codefactor.io/repository/github/dawid-szaniawski/image_scraper
