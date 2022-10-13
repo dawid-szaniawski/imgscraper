@@ -12,15 +12,12 @@ class Bs4Scraper(Scraper):
     """Scans websites for images and returns data about them."""
 
     def get_images_data(self, image_source: ImagesSource) -> set[Image]:
-        """The method that starts the synchronization process.
+        """Method that starts the synchronization process.
 
         Args:
             image_source: the ImagesSource object. Contains website data.
 
-        Returns: set containing dicts with images data:
-            - image source (image page),
-            - url_address (src from image object),
-            - title (alt from image object)."""
+        Returns: set containing the Image objects."""
         html_dom = self._get_html_dom(image_source.current_url_address)
         return self.prepare_image_objects(
             image_source.domain, html_dom.select("." + image_source.container_class)
@@ -44,10 +41,10 @@ class Bs4Scraper(Scraper):
         """Iterates over ResultSet of image holders and add images into a set.
 
         Args:
-            domain: string containing a domain of the scraped website.
+            domain: domain of the scraped website.
             image_holders: ResultSet object containing the images' data.
 
-        Returns: set containing the Image objects"""
+        Returns: set containing the Image objects."""
         images = set()
 
         for div in image_holders:
@@ -62,7 +59,7 @@ class Bs4Scraper(Scraper):
 
         Args:
             div: Tag object containing a div with image.
-            domain: string containing a domain of the scraped website.
+            domain: domain of the scraped website.
 
         Returns: Image object based on the supplied div or None (if the required data
             cannot be found or the image source does not have the extension)."""
@@ -95,12 +92,11 @@ class Bs4Scraper(Scraper):
         """Search the HTML DOM for the next page URL address.
 
         Args:
-            current_url_address: string containing URL address of the website to scan
-            for the next page.
-            domain: string containing domain and protocol of the website to scan for
-                the next page.
-            pagination_class: string containing class of div or section element
-                containing pagination URLs.
+            current_url_address: the URL address of the website to scan for the next
+                page.
+            domain: domain and protocol of the website to scan for the next page.
+            pagination_class: class of div or section element containing pagination
+                URLs.
             scraped_urls: to avoid duplicates, it is required to provide previously
                 scanned URLs.
 
@@ -132,7 +128,7 @@ class Bs4Scraper(Scraper):
         """Adds domain if not present in URL address and deletes double slashes.
 
         Args:
-            domain: string containing a domain of the scraped website.
+            domain: domain of the scraped website.
             item_url: URL address there the domain may be missing.
 
         Returns: string containing correct URL address."""
@@ -154,8 +150,8 @@ class Bs4Scraper(Scraper):
             before.
 
         Args:
-            domain: string containing a domain of the scraped website.
-            new_url: string containing the URL address to check.
+            domain: domain of the scraped website.
+            new_url: a URL address to check.
             scraped_urls: set of previously checked URL addresses."""
         if new_url in scraped_urls:
             return False

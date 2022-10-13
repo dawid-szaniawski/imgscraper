@@ -126,19 +126,42 @@ class TestPrepareImageObjects:
 
 @pytest.mark.unittests
 class TestFindImageData:
+    def test_happy_path(self, prepare_second_html_doc: str) -> None:
+        div = BeautifulSoup(prepare_second_html_doc, "html.parser").div
+        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
+        expected_image = Image(
+            source="https://webludus.pl/02",
+            url_address="https://webludus.pl/img/image02.jpg",
+            title="Image 02",
+            created_at=creation_time,
+        )
+        with freeze_time(creation_time):
+            image = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
+        assert image == expected_image
+
     def test_in_case_of_key_error_return_none(self) -> None:
-        div_data = """<div class="simple-image"><a href="https://webludus.pl">
-                                <img src="https://webludus.pl/img/image.jpg"></a>
-                                </div>"""
-        soup = BeautifulSoup(div_data, "html.parser")
-        div = soup.div
-        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl") is None
+        div_data = """
+        <div class="simple-image">
+            <a href="https://webludus.pl">
+                <img src="https://webludus.pl/img/image.jpg">
+            </a></div>"""
+        div = BeautifulSoup(div_data, "html.parser").div
+        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
 
     def test_in_case_of_type_error_return_none(self) -> None:
         div_data = """<div class="simple-image"></div>"""
+        div = BeautifulSoup(div_data, "html.parser").div
+        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
+
+    def test_if_there_is_no_extension_in_img_src_return_none(self):
+        div_data = """
+        <div class="simple-image">
+            <a href="https://webludus.pl">
+                <img src="https://webludus.pl/img/image" alt="Webludus">
+            </a></div>"""
         soup = BeautifulSoup(div_data, "html.parser")
         div = soup.div
-        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl") is None
+        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
 
 
 @pytest.mark.integtests

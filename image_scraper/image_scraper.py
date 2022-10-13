@@ -3,15 +3,7 @@ from image_scraper.scrapers.scraper import Scraper
 
 
 class ImageScraper:
-    """Image information retrieval tool.
-
-    Args:
-        website_url:
-        container_class:
-        pagination_class:
-        pages_to_scan:
-        scraper:
-    """
+    """Image information retrieval tool."""
 
     def __init__(
         self,
@@ -21,6 +13,15 @@ class ImageScraper:
         pages_to_scan: int,
         scraper: Scraper,
     ) -> None:
+        """Constructor.
+
+        Args:
+            website_url: the URL address of website to scan.
+            container_class: a class of div or section element containing image
+            pagination_class: a class of div or section element containing pagination
+                URLs.
+            pages_to_scan: how many pages should be scraped.
+            scraper: tool to be used."""
         self.image_source = ImagesSource(
             current_url_address=website_url,
             container_class=container_class,
@@ -57,6 +58,16 @@ class ImageScraper:
 
     @synchronization_data.setter
     def synchronization_data(self, images: list[Image]) -> None:
-        """Converts a set of Image objects into a list of dictionaries and append it
-        into synchronization data."""
-        self._synchronization_data.extend(images)
+        if isinstance(images, list):
+            index = 0
+            for image in images:
+                if isinstance(image, Image):
+                    self._synchronization_data.append(image)
+                else:
+                    raise AttributeError(
+                        f"Only Image objects can appear in the sync data. "
+                        f"Invalid element index: {index}."
+                    )
+                index += 1
+        else:
+            raise AttributeError("Invalid variable type")

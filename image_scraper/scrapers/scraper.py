@@ -13,10 +13,7 @@ class Scraper(ABC):
         Args:
             image_source: the ImagesSource object. Contains website data.
 
-        Returns: set containing dicts with images data:
-            - image source (image page),
-            - url_address (src from image object),
-            - title (alt from image object)."""
+        Returns: set containing the Image objects."""
         pass
 
     @abstractmethod
@@ -30,12 +27,11 @@ class Scraper(ABC):
         """Search the HTML DOM for the next page URL address.
 
         Args:
-            current_url_address: string containing URL address of the website to scan
-            for the next page.
-            domain: string containing domain and protocol of the website to scan for
-                the next page.
-            pagination_class: string containing class of div or section element
-                containing pagination URLs.
+            current_url_address: the URL address of the website to scan for the next
+                page.
+            domain: domain and protocol of the website to scan for the next page.
+            pagination_class: class of div or section element containing pagination
+                URLs.
             scraped_urls: to avoid duplicates, it is required to provide previously
                 scanned URLs.
 

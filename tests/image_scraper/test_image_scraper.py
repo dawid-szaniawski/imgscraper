@@ -1,7 +1,8 @@
+from datetime import datetime
+
 import pytest
 import responses
 from freezegun import freeze_time
-from datetime import datetime
 
 from image_scraper.image_scraper import ImageScraper
 from image_scraper.scrapers import scraper, bs4_scraper
@@ -43,12 +44,11 @@ def prepare_image_scraper(
             """Search the HTML DOM for the next page URL address.
 
             Args:
-                current_url_address: string containing URL address of the website to
-                    scan for the next page.
-                domain: string containing domain and protocol of the website to scan for
-                    the next page.
-                pagination_class: string containing class of div or section element
-                    containing pagination URLs.
+                current_url_address: URL address of the website to scan for the next
+                    page.
+                domain: domain and protocol of the website to scan for the next page.
+                pagination_class: a class of div or section element containing
+                    pagination URLs.
                 scraped_urls: to avoid duplicates, it is required to provide previously
                     scanned URLs.
 
@@ -94,13 +94,33 @@ class TestSynchronizationDataSetter:
     def test_synchronization_data_should_have_correct_output(
         self, prepare_image: Image, prepare_image_scraper: ImageScraper
     ) -> None:
-        images = {prepare_image}
+        images = [prepare_image]
 
         prepare_image_scraper.synchronization_data = images
 
         assert isinstance(prepare_image_scraper.synchronization_data, list)
         assert isinstance(prepare_image_scraper.synchronization_data[0], Image)
         assert prepare_image_scraper.synchronization_data[0] == prepare_image
+
+    def test_raise_attribute_error_if_user_does_not_use_list(
+        self, prepare_image: Image, prepare_image_scraper: ImageScraper
+    ):
+        images = (prepare_image,)
+
+        with pytest.raises(AttributeError, match="Invalid variable type"):
+            prepare_image_scraper.synchronization_data = images
+
+    def test_raise_attribute_error_if_there_are_no_images_in_list(
+        self, prepare_image: Image, prepare_image_scraper: ImageScraper
+    ):
+        images = [prepare_image, "str"]
+        message = (
+            "Only Image objects can appear in the sync data. Invalid element "
+            "index: 1."
+        )
+
+        with pytest.raises(AttributeError, match=message):
+            prepare_image_scraper.synchronization_data = images
 
 
 @pytest.mark.integtests
@@ -124,25 +144,25 @@ class TestImageScraper:
         )
         creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
         expected_sync_data = [
-                Image(
-                    source="https://webludus.pl/00",
-                    title="Webludus",
-                    url_address="https://webludus.pl/img/image.jpg",
-                    created_at=creation_time
-                ),
-                Image(
-                    source="https://webludus.pl/01",
-                    title="Image 01",
-                    url_address="https://webludus.pl/img/image01.jpg",
-                    created_at=creation_time
-                ),
-                Image(
-                    source="https://webludus.pl/02",
-                    title="Image 02",
-                    url_address="https://webludus.pl/img/image02.jpg",
-                    created_at=creation_time
-                )
-            ]
+            Image(
+                source="https://webludus.pl/00",
+                title="Webludus",
+                url_address="https://webludus.pl/img/image.jpg",
+                created_at=creation_time,
+            ),
+            Image(
+                source="https://webludus.pl/01",
+                title="Image 01",
+                url_address="https://webludus.pl/img/image01.jpg",
+                created_at=creation_time,
+            ),
+            Image(
+                source="https://webludus.pl/02",
+                title="Image 02",
+                url_address="https://webludus.pl/img/image02.jpg",
+                created_at=creation_time,
+            ),
+        ]
         image_scraper = ImageScraper(
             website_url=website_url,
             container_class=container_class,
