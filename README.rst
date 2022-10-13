@@ -2,6 +2,8 @@ Image_Scraper: yet another web scraper
 ====================================================
 .. image:: https://github.com/dawid-szaniawski/image_scraper/actions/workflows/tox_tests.yml/badge.svg
    :target: https://github.com/dawid-szaniawski/image_scraper/actions
+.. image:: https://codecov.io/gh/dawid-szaniawski/image_scraper/branch/master/graph/badge.svg?token=ILZBZ7HW6G
+ :target: https://codecov.io/gh/dawid-szaniawski/image_scraper
 .. image:: https://www.codefactor.io/repository/github/dawid-szaniawski/image_scraper/badge
    :target: https://www.codefactor.io/repository/github/dawid-szaniawski/image_scraper
    :alt: CodeFactor
