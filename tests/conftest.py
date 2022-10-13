@@ -1,7 +1,18 @@
+from datetime import datetime
+
 from pytest import fixture
 from responses import RequestsMock
 
 from image_scraper.models import ImagesSource, Image
+
+
+FAKE_TIME: datetime = datetime(2022, 10, 12, 14, 28, 21, 720446)
+WEBSITE_URL: str = "https://webludus.pl/"
+IMAGE_URL: str = "https://webludus.pl/img/image.jpg"
+TITLE: str = "Webludus"
+CONTAINER_CLASS: str = "simple-image"
+PAGINATION_CLASS: str = "pagination"
+PAGES_TO_SCAN: int = 3
 
 
 @fixture(scope="class")
@@ -11,69 +22,63 @@ def mocked_responses() -> RequestsMock:
         yield response
 
 
-@fixture(scope="class")
-def prepare_website_data() -> dict[str, str | int]:
-    return {
-        "website_url": "https://webludus.pl/",
-        "container_class": "simple-image",
-        "pagination_class": "pagination",
-        "pages_to_scan": 3,
-    }
+@fixture(scope="session")
+def prepare_website_data() -> tuple[str, str, str, int]:
+    return WEBSITE_URL, CONTAINER_CLASS, PAGINATION_CLASS, PAGES_TO_SCAN
 
 
 @fixture(scope="session")
-def prepare_image_model_data() -> dict[str, str]:
-    return {
-        "source": "https://webludus.pl",
-        "url_address": "https://webludus.pl/img/image.jpg",
-        "title": "Webludus",
+def prepare_image_model_data() -> dict[str, str | datetime]:
+    yield {
+        "source": WEBSITE_URL,
+        "url_address": IMAGE_URL,
+        "title": TITLE,
+        "created_at": FAKE_TIME,
     }
 
 
 @fixture(scope="class")
-def prepare_images_source(prepare_website_data: dict[str, str | int]) -> ImagesSource:
+def prepare_images_source() -> ImagesSource:
     yield ImagesSource(
-        current_url_address=prepare_website_data["website_url"],
-        container_class=prepare_website_data["container_class"],
-        pagination_class=prepare_website_data["pagination_class"],
-        pages_to_scan=prepare_website_data["pages_to_scan"],
+        current_url_address=WEBSITE_URL,
+        container_class=CONTAINER_CLASS,
+        pagination_class=PAGINATION_CLASS,
+        pages_to_scan=PAGES_TO_SCAN,
     )
 
 
-@fixture(scope="class")
+@fixture(scope="session")
 def prepare_image(prepare_image_model_data) -> Image:
     yield Image(
-        source=prepare_image_model_data["source"],
-        url_address=prepare_image_model_data["url_address"],
-        title=prepare_image_model_data["title"],
+        source=WEBSITE_URL, url_address=IMAGE_URL, title=TITLE, created_at=FAKE_TIME
     )
 
 
 @fixture(scope="session")
 def prepare_html_doc() -> str:
-    yield """<html><head><title>BS4 Mock</title></head>
+    yield f"""<html><head><title>BS4 Mock</title></head>
     <body>
-        <div class="simple-image">
+        <div class="{CONTAINER_CLASS}">
             <a href="https://webludus.pl/00">
-                <img src="https://webludus.pl/img/image.jpg" alt="Imagocms">
+                <img src="{IMAGE_URL}" alt="{TITLE}">
             </a>
         </div>
-        <div class="simple-image">
+        <div class="{CONTAINER_CLASS}">
             <a href="https://webludus.pl/01">
                 <img src="https://webludus.pl/img/image01.jpg" alt="Image 01">
             </a>
         </div>
-        <div class="simple-image">
+        <div class="{CONTAINER_CLASS}">
             <a href="https://webludus.pl/01">
                 <img src="https://webludus.pl/img/image01.jpg" alt="Image 01">
             </a>
         </div>
-        <div class="simple-image">
+        <div class="{CONTAINER_CLASS}">
             <a href="https://webludus.pl/00">
                 <img src="https://webludus.pl/img/image.jpg">
             </a>
         </div>
-        <div class="pagination">
+        <div class="{PAGINATION_CLASS}">
             <a href="https://webludus.pl">1</a>
             <a href="#">1</a>
             <a href="https://webludus.pl/random">Random</a>
@@ -86,9 +91,9 @@ def prepare_html_doc() -> str:
 
 @fixture(scope="session")
 def prepare_second_html_doc() -> str:
-    yield """<html><head><title>BS4 Mock</title></head>
+    yield f"""<html><head><title>BS4 Mock</title></head>
     <body>
-        <div class="simple-image">
+        <div class={CONTAINER_CLASS}>
             <a href="https://webludus.pl/02">
                 <img src="/img/image02.jpg" alt="Image 02">
             </a>
