@@ -27,16 +27,6 @@ def prepare_website_data() -> tuple[str, str, str, int]:
     return WEBSITE_URL, CONTAINER_CLASS, PAGINATION_CLASS, PAGES_TO_SCAN
 
 
-@fixture(scope="session")
-def prepare_image_model_data() -> dict[str, str | datetime]:
-    yield {
-        "source": WEBSITE_URL,
-        "url_address": IMAGE_URL,
-        "title": TITLE,
-        "created_at": FAKE_TIME,
-    }
-
-
 @fixture(scope="class")
 def prepare_images_source() -> ImagesSource:
     yield ImagesSource(
@@ -45,6 +35,16 @@ def prepare_images_source() -> ImagesSource:
         pagination_class=PAGINATION_CLASS,
         pages_to_scan=PAGES_TO_SCAN,
     )
+
+
+@fixture(scope="session")
+def prepare_image_model_data() -> dict[str, str | datetime]:
+    yield {
+        "source": WEBSITE_URL,
+        "url_address": IMAGE_URL,
+        "title": TITLE,
+        "created_at": FAKE_TIME,
+    }
 
 
 @fixture(scope="session")

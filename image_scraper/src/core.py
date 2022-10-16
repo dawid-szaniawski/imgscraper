@@ -59,15 +59,16 @@ class ImageScraper:
     @synchronization_data.setter
     def synchronization_data(self, images: list[Image]) -> None:
         if isinstance(images, list):
-            index = 0
             for image in images:
                 if isinstance(image, Image):
                     self._synchronization_data.append(image)
                 else:
                     raise AttributeError(
-                        f"Only Image objects can appear in the sync data. "
-                        f"Invalid element index: {index}."
+                        f"Only Image objects can appear in the sync data.\n"
+                        f"Invalid element: {image}.\n"
+                        f"Invalid element type: {type(image)}."
                     )
-                index += 1
         else:
-            raise AttributeError("Invalid variable type")
+            raise AttributeError(
+                f"Invalid variable type.\nElement type: {type(images)}."
+            )
