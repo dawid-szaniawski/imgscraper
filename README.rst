@@ -54,7 +54,7 @@ Output
 
 Image Object
 ~~~~~~~~~
-The Image object provides the ``.as_dict`` property to turn it into a dictionary.
+The Image object provides the ``.as_dict()`` method to turn it into a dictionary.
 
 .. code-block:: python
 
@@ -63,7 +63,7 @@ The Image object provides the ``.as_dict`` property to turn it into a dictionary
             url_address="https://imagocms.webludus.pl/img/01.jpg",
             title="String",
             created_at=datetime.datetime(2022, 10, 13, 16, 17, 39, 196078)
-        ).as_dict
+        ).as_dict()
 
     img = {
         "source": "https://imagocms.webludus.pl/images/01/",
