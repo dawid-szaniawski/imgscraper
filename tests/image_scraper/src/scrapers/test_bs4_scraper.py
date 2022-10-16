@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 import responses
@@ -132,7 +132,6 @@ class TestPrepareImageObjects:
         )
         img = sorted(images, key=lambda image: image.created_at, reverse=True)
         assert img[0].created_at > img[1].created_at
-        assert (img[0].created_at - img[1].created_at) == timedelta(minutes=1)
         assert img[0].title == "Webludus"
         assert img[1].title == "Image 01"
 
