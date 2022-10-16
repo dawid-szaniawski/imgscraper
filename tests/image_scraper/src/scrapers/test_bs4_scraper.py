@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import responses
@@ -122,21 +122,32 @@ class TestPrepareImageObjects:
             )
         assert images == expected_images
 
+    def test_first_image_in_document_should_be_most_recent(
+        self,
+        prepare_image_holders: ResultSet,
+        prepare_images_source: ImagesSource,
+    ):
+        images = Bs4Scraper().prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders
+        )
+        img = sorted(images, key=lambda image: image.created_at, reverse=True)
+        assert img[0].created_at > img[1].created_at
+        assert (img[0].created_at - img[1].created_at) == timedelta(minutes=1)
+        assert img[0].title == "Webludus"
+        assert img[1].title == "Image 01"
+
 
 @pytest.mark.unittests
 class TestFindImageData:
     def test_happy_path(self, prepare_second_html_doc: str) -> None:
         div = BeautifulSoup(prepare_second_html_doc, "html.parser").div
-        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
-        expected_image = Image(
-            source="https://webludus.pl/02",
-            url_address="https://webludus.pl/img/image02.jpg",
-            title="Image 02",
-            created_at=creation_time,
+        expected_image_data = (
+            "https://webludus.pl/02",
+            "https://webludus.pl/img/image02.jpg",
+            "Image 02",
         )
-        with freeze_time(creation_time):
-            image = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
-        assert image == expected_image
+        image_data = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
+        assert image_data == expected_image_data
 
     def test_in_case_of_key_error_return_none(self) -> None:
         div_data = """

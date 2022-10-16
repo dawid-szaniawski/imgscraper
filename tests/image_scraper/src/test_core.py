@@ -106,8 +106,9 @@ class TestSynchronizationDataSetter:
         self, prepare_image: Image, prepare_image_scraper: ImageScraper
     ):
         images = (prepare_image,)
+        message = "Invalid variable type.\nElement type: <class 'tuple'>."
 
-        with pytest.raises(AttributeError, match="Invalid variable type"):
+        with pytest.raises(AttributeError, match=message):
             prepare_image_scraper.synchronization_data = images
 
     def test_raise_attribute_error_if_there_are_no_images_in_list(
@@ -115,8 +116,8 @@ class TestSynchronizationDataSetter:
     ):
         images = [prepare_image, "str"]
         message = (
-            "Only Image objects can appear in the sync data. Invalid element "
-            "index: 1."
+            "Only Image objects can appear in the sync data.\nInvalid element: str.\n"
+            "Invalid element type: <class 'str'>."
         )
 
         with pytest.raises(AttributeError, match=message):

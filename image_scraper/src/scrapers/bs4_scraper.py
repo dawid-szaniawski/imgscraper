@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from requests import get
 from bs4 import BeautifulSoup
@@ -46,14 +46,24 @@ class Bs4Scraper(Scraper):
 
         Returns: set containing the Image objects."""
         images = set()
+        time = timedelta(minutes=0)
 
         for div in image_holders:
-            image = self._find_image_data(div, domain)
-            if image:
-                images.add(image)
+            image_data = self._find_image_data(div, domain)
+            if image_data:
+                images.add(
+                    Image(
+                        source=image_data[0],
+                        url_address=image_data[1],
+                        title=image_data[2],
+                        created_at=datetime.now() - time,
+                    )
+                )
+                time += timedelta(minutes=1)
+
         return images
 
-    def _find_image_data(self, div: Tag, domain: str) -> Image | None:
+    def _find_image_data(self, div: Tag, domain: str) -> tuple[str, str, str] | None:
         """Searches the Tag object for image-related data: source link, image source,
         and image description (alt).
 
@@ -70,12 +80,7 @@ class Bs4Scraper(Scraper):
             )
             image_src = self.add_domain_into_url_address(domain, image["src"])
             if image_src[-4] == "." or image_src[-5] == ".":
-                return Image(
-                    source=image_source,
-                    url_address=image_src,
-                    title=image["alt"],
-                    created_at=datetime.now(),
-                )
+                return image_source, image_src, image["alt"]
             return None
         except TypeError:
             return None

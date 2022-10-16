@@ -20,6 +20,13 @@ class Image:
     title: str
     created_at: datetime
 
-    @property
-    def as_dict(self):
+    def __eq__(self, other):
+        if other.__class__ is self.__class__:
+            return self.url_address == other.url_address
+        return False
+
+    def __hash__(self):
+        return hash(self.url_address)
+
+    def as_dict(self) -> dict[str, str | datetime]:
         return asdict(self)
