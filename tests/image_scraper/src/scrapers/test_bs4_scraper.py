@@ -39,7 +39,7 @@ class TestGetImagesData:
             prepare_images_source.current_url_address
         )
         prepare_image_objects.assert_called_once_with(
-            prepare_images_source.domain,
+            prepare_images_source.current_url_address,
             prepare_beautiful_soup.select("." + prepare_images_source.container_class),
         )
 
@@ -93,8 +93,10 @@ class TestPrepareImageObjects:
             prepare_images_source.current_url_address, prepare_image_holders
         )
 
-        assert isinstance(images, set)
-        assert isinstance(list(images)[0], Image)
+        assert isinstance(images, tuple)
+        assert isinstance(images[0], set)
+        assert isinstance(images[1], bool)
+        assert isinstance(list(images[0])[0], Image)
 
     def test_output_should_have_correct_data(
         self,
@@ -119,7 +121,7 @@ class TestPrepareImageObjects:
         with freeze_time(creation_time):
             images = Bs4Scraper().prepare_image_objects(
                 prepare_images_source.current_url_address, prepare_image_holders
-            )
+            )[0]
         assert images == expected_images
 
     def test_first_image_in_document_should_be_most_recent(
@@ -129,11 +131,23 @@ class TestPrepareImageObjects:
     ):
         images = Bs4Scraper().prepare_image_objects(
             prepare_images_source.current_url_address, prepare_image_holders
-        )
+        )[0]
         img = sorted(images, key=lambda image: image.created_at, reverse=True)
         assert img[0].created_at > img[1].created_at
         assert img[0].title == "Webludus"
         assert img[1].title == "Image 01"
+
+    def test_stop_scraping_if_image_is_in_last_sync_data(
+        self,
+        prepare_image_holders: ResultSet,
+        prepare_images_source: ImagesSource,
+    ):
+        scraper = Bs4Scraper(("https://webludus.pl/img/image.jpg",))
+        images_data = scraper.prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders
+        )
+        assert len(images_data[0]) == 0
+        assert images_data[1] is True
 
 
 @pytest.mark.unittests

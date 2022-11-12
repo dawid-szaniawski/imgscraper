@@ -29,17 +29,17 @@ def prepare_website_data() -> tuple[str, str, str, int]:
 
 @fixture(scope="class")
 def prepare_images_source() -> ImagesSource:
-    yield ImagesSource(
+    return ImagesSource(
         current_url_address=WEBSITE_URL,
         container_class=CONTAINER_CLASS,
         pagination_class=PAGINATION_CLASS,
-        pages_to_scan=PAGES_TO_SCAN,
+        pages_to_scan=PAGES_TO_SCAN
     )
 
 
 @fixture(scope="session")
 def prepare_image_model_data() -> dict[str, str | datetime]:
-    yield {
+    return {
         "source": WEBSITE_URL,
         "url_address": IMAGE_URL,
         "title": TITLE,
@@ -49,14 +49,14 @@ def prepare_image_model_data() -> dict[str, str | datetime]:
 
 @fixture(scope="session")
 def prepare_image(prepare_image_model_data) -> Image:
-    yield Image(
+    return Image(
         source=WEBSITE_URL, url_address=IMAGE_URL, title=TITLE, created_at=FAKE_TIME
     )
 
 
 @fixture(scope="session")
 def prepare_html_doc() -> str:
-    yield f"""<html><head><title>BS4 Mock</title></head>
+    return f"""<html><head><title>BS4 Mock</title></head>
     <body>
         <div class="{CONTAINER_CLASS}">
             <a href="https://webludus.pl/00">
@@ -91,7 +91,7 @@ def prepare_html_doc() -> str:
 
 @fixture(scope="session")
 def prepare_second_html_doc() -> str:
-    yield f"""<html><head><title>BS4 Mock</title></head>
+    return f"""<html><head><title>BS4 Mock</title></head>
     <body>
         <div class={CONTAINER_CLASS}>
             <a href="https://webludus.pl/02">

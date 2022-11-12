@@ -20,7 +20,12 @@ def prepare_image_scraper(
         """Mocker of the Scraper class.
         It has implementation of all the scraper methods."""
 
-        def get_images_data(self, image_source: ImagesSource) -> set[Image]:
+        def __init__(self, last_sync_data: tuple | tuple[str] = ()):
+            self.last_sync_data = last_sync_data
+
+        def get_images_data(
+                self, image_source: ImagesSource
+        ) -> tuple[set[Image], bool]:
             """The method that starts the synchronization process.
 
             Args:
@@ -30,9 +35,7 @@ def prepare_image_scraper(
                 - image source (image page),
                 - url_address (src from image object),
                 - title (alt from image object)."""
-            return {
-                prepare_image,
-            }
+            return {prepare_image, }, False
 
         def find_next_page(
             self,

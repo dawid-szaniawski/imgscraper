@@ -10,7 +10,7 @@ class TestCreateImageScraper:
         website_url, container_class, pagination_class, pages = prepare_website_data
 
         scraper = create_image_scraper(
-            website_url, container_class, pagination_class, pages, "bs4"
+            website_url, container_class, pagination_class, pages, scraper="bs4"
         )
 
         assert isinstance(scraper.scraper, Bs4Scraper)
@@ -25,7 +25,7 @@ class TestCreateImageScraper:
     ):
         website_url, container_class, pagination_class, pages = prepare_website_data
 
-        with pytest.raises(NameError, match="This tool is not supported."):
+        with pytest.raises(ValueError, match="This tool is not supported."):
             create_image_scraper(
-                website_url, container_class, pagination_class, pages, "TEST"
+                website_url, container_class, pagination_class, pages, scraper="TEST"
             )

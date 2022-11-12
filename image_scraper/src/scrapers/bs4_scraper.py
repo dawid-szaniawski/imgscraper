@@ -11,7 +11,10 @@ from image_scraper.src.scrapers.scraper import Scraper
 class Bs4Scraper(Scraper):
     """Scans websites for images and returns data about them."""
 
-    def get_images_data(self, image_source: ImagesSource) -> set[Image]:
+    def __init__(self, last_sync_data: tuple | tuple[str] = ()):
+        self.last_sync_data = last_sync_data
+
+    def get_images_data(self, image_source: ImagesSource) -> tuple[set[Image], bool]:
         """Method that starts the synchronization process.
 
         Args:
@@ -37,7 +40,7 @@ class Bs4Scraper(Scraper):
 
     def prepare_image_objects(
         self, domain: str, image_holders: ResultSet
-    ) -> set[Image]:
+    ) -> tuple[set[Image], bool]:
         """Iterates over ResultSet of image holders and add images into a set.
 
         Args:
@@ -46,11 +49,15 @@ class Bs4Scraper(Scraper):
 
         Returns: set containing the Image objects."""
         images = set()
+        duplicates = False
         time = timedelta(minutes=0)
 
         for div in image_holders:
             image_data = self._find_image_data(div, domain)
             if image_data:
+                if image_data[1] in self.last_sync_data:
+                    duplicates = True
+                    break
                 images.add(
                     Image(
                         source=image_data[0],
@@ -61,7 +68,7 @@ class Bs4Scraper(Scraper):
                 )
                 time += timedelta(minutes=1)
 
-        return images
+        return images, duplicates
 
     def _find_image_data(self, div: Tag, domain: str) -> tuple[str, str, str] | None:
         """Searches the Tag object for image-related data: source link, image source,

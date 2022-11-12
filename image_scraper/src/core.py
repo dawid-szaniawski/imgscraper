@@ -40,7 +40,13 @@ class ImageScraper:
         }
 
         while self.image_source.pages_to_scan > 0:
-            images_data.update(self.scraper.get_images_data(self.image_source))
+            images, duplicates = self.scraper.get_images_data(self.image_source)
+            images_data.update(images)
+
+            if duplicates:
+                self.image_source.pages_to_scan = 0
+                break
+
             if self.image_source.pages_to_scan > 1:
                 next_page_data = self.scraper.find_next_page(
                     current_url_address=self.image_source.current_url_address,
@@ -49,7 +55,9 @@ class ImageScraper:
                     scraped_urls=scraped_urls,
                 )
                 self.image_source.current_url_address, scraped_urls = next_page_data
+
             self.image_source.pages_to_scan -= 1
+
         self.synchronization_data = list(images_data)
 
     @property

@@ -12,7 +12,7 @@ def create_image_scraper(
     container_class: str,
     pagination_class: str,
     pages_to_scan: int,
-    scraper: str = "bs4",
+    **kwargs
 ) -> ImageScraper:
     """Constructor for the ImageScraper object. Imports scrapers and delivers them to
     ImageScraper based on the information in the scraper variable.
@@ -23,16 +23,24 @@ def create_image_scraper(
         pagination_class: a class of div or section element containing pagination
             URLs.
         pages_to_scan: how many pages should be scraped.
-        scraper: tool to be used.
 
     Returns: the ImageScraper object."""
-    if scraper in SCRAPERS:
-        return ImageScraper(
-            website_url=website_url,
-            container_class=container_class,
-            pagination_class=pagination_class,
-            pages_to_scan=pages_to_scan,
-            scraper=SCRAPERS[scraper],
-        )
+    args = [website_url, container_class, pagination_class, pages_to_scan]
+    if kwargs.get("scraper"):
+        if kwargs["scraper"] in SCRAPERS:
+            args.append(SCRAPERS[kwargs["scraper"]])
+        else:
+            raise ValueError("This tool is not supported.")
     else:
-        raise NameError("This tool is not supported.")
+        args.append(SCRAPERS["bs4"])
+
+    if kwargs.get("last_sync_data"):
+        last_sync_data = kwargs["last_sync_data"]
+        if isinstance(last_sync_data, tuple) and all(
+            isinstance(i, str) for i in last_sync_data
+        ):
+            args.append(last_sync_data)
+        else:
+            raise ValueError("Last sync data should be tuple")
+
+    return ImageScraper(*args)
