@@ -23,17 +23,14 @@ ____
     img_scraper = create_image_scraper(
         website_url="https://imagocms.webludus.pl/",
         container_class="image-holder",
-        pagination_class="pagination",
-        pages_to_scan=3,
-        scraper="bs4"
+        pagination_class="pagination"
     )
 
     img_scraper.start_sync()
 
     print(img_scraper.synchronization_data)
 
-Output
-~~~~~~~~~
+Output:
 
 .. code-block:: python
 
@@ -52,6 +49,39 @@ Output
         )
     ]
 
+Pages to scan and scraper
+~~~~~~~~~
+The user can specify how many subpages should be scraped and what tool the application should use.
+
+.. code-block:: python
+
+    from image_scraper.scraper_constructor import create_image_scraper
+
+    img_scraper = create_image_scraper(
+        website_url="https://imagocms.webludus.pl/",
+        container_class="image-holder",
+        pagination_class="pagination",
+        pages_to_scan=1,
+        scraper="bs4"
+    )
+
+Last sync data
+~~~~~~~~~
+When starting the synchronization process, the user can provide data from the last synchronization (img.src).
+If the application encounters a provided image, the process is terminated. All previously synced images are available.
+
+.. code-block:: python
+
+    from image_scraper.scraper_constructor import create_image_scraper
+
+    img_scraper.start_sync(
+        (
+            "https://imagocms.webludus.pl/img/01.jpg",
+            "https://imagocms.webludus.pl/img/02.jpg",
+        )
+    )
+
+
 Image Object
 ~~~~~~~~~
 The Image object provides the ``.as_dict()`` method to turn it into a dictionary.
@@ -64,6 +94,10 @@ The Image object provides the ``.as_dict()`` method to turn it into a dictionary
             title="String",
             created_at=datetime.datetime(2022, 10, 13, 16, 17, 39, 196078)
         ).as_dict()
+
+Output:
+
+.. code-block:: python
 
     img = {
         "source": "https://imagocms.webludus.pl/images/01/",

@@ -7,15 +7,14 @@ class Scraper(ABC):
     """Scans websites for images and returns data about them."""
 
     @abstractmethod
-    def __init__(self, last_sync_data: tuple | tuple[str]):
-        pass
-
-    @abstractmethod
-    def get_images_data(self, image_source: ImagesSource) -> tuple[set[Image], bool]:
+    def get_images_data(
+        self, image_source: ImagesSource, last_sync_data: tuple[str] | tuple[()] = ()
+    ) -> tuple[set[Image], bool]:
         """The method that starts the synchronization process.
 
         Args:
             image_source: the ImagesSource object. Contains website data.
+            last_sync_data: URLs of recently downloaded images (img_src).
 
         Returns: set containing the Image objects."""
         pass

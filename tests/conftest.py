@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Generator
 
 from pytest import fixture
 from responses import RequestsMock
@@ -12,11 +13,11 @@ IMAGE_URL: str = "https://webludus.pl/img/image.jpg"
 TITLE: str = "Webludus"
 CONTAINER_CLASS: str = "simple-image"
 PAGINATION_CLASS: str = "pagination"
-PAGES_TO_SCAN: int = 3
+PAGES_TO_SCAN: int = 4
 
 
 @fixture(scope="class")
-def mocked_responses() -> RequestsMock:
+def mocked_responses() -> Generator[RequestsMock, None, None]:
     """Yields responses.RequestsMock as a context manager."""
     with RequestsMock() as response:
         yield response
@@ -33,7 +34,7 @@ def prepare_images_source() -> ImagesSource:
         current_url_address=WEBSITE_URL,
         container_class=CONTAINER_CLASS,
         pagination_class=PAGINATION_CLASS,
-        pages_to_scan=PAGES_TO_SCAN
+        pages_to_scan=PAGES_TO_SCAN,
     )
 
 
@@ -48,7 +49,7 @@ def prepare_image_model_data() -> dict[str, str | datetime]:
 
 
 @fixture(scope="session")
-def prepare_image(prepare_image_model_data) -> Image:
+def prepare_image(prepare_image_model_data: dict[str, str | datetime]) -> Image:
     return Image(
         source=WEBSITE_URL, url_address=IMAGE_URL, title=TITLE, created_at=FAKE_TIME
     )
@@ -97,5 +98,15 @@ def prepare_second_html_doc() -> str:
             <a href="https://webludus.pl/02">
                 <img src="/img/image02.jpg" alt="Image 02">
             </a>
+        </div>
+        <div class="{CONTAINER_CLASS}">
+            <a href="https://webludus.pl/02">
+                <img src="https://webludus.pl/img/last_seen_image.jpg" alt="Image">
+            </a>
+        </div>
+        <div class="{PAGINATION_CLASS}">
+            <a href="https://webludus.pl">1</a>
+            <a href="#">3</a>
+            <a href="https://webludus.pl/page/4">Next</a>
         </div>
     </body></html>"""

@@ -48,3 +48,4 @@ class TestImage:
         self, prepare_image: Image
     ) -> None:
         assert prepare_image != "TEST"
+        assert (prepare_image == 1) is False

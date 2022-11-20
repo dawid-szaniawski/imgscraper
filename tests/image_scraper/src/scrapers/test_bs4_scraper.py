@@ -12,7 +12,7 @@ from image_scraper.src.models import Image, ImagesSource
 
 
 @pytest.fixture(scope="session")
-def prepare_beautiful_soup(prepare_html_doc) -> BeautifulSoup:
+def prepare_beautiful_soup(prepare_html_doc: str) -> BeautifulSoup:
     """Prepares the BeautifulSoup object based on prepare_html_doc fixture."""
     yield BeautifulSoup(prepare_html_doc, "html.parser")
 
@@ -30,7 +30,7 @@ class TestGetImagesData:
         )
         get_html_dom_mock.return_value = prepare_beautiful_soup
         prepare_image_objects = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper.prepare_image_objects"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._prepare_image_objects"
         )
 
         Bs4Scraper().get_images_data(image_source=prepare_images_source)
@@ -41,6 +41,7 @@ class TestGetImagesData:
         prepare_image_objects.assert_called_once_with(
             prepare_images_source.current_url_address,
             prepare_beautiful_soup.select("." + prepare_images_source.container_class),
+            tuple(),
         )
 
 
@@ -63,7 +64,7 @@ class TestGetHtmlDom:
         self,
         prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
-        prepare_html_doc,
+        prepare_html_doc: str,
     ) -> None:
         mocked_responses.get(
             prepare_images_source.current_url_address, body=prepare_html_doc
@@ -89,8 +90,8 @@ class TestPrepareImageObjects:
     def test_output_should_be_in_correct_type(
         self, prepare_image_holders: ResultSet, prepare_images_source: ImagesSource
     ) -> None:
-        images = Bs4Scraper().prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, ()
         )
 
         assert isinstance(images, tuple)
@@ -119,8 +120,8 @@ class TestPrepareImageObjects:
             ),
         }
         with freeze_time(creation_time):
-            images = Bs4Scraper().prepare_image_objects(
-                prepare_images_source.current_url_address, prepare_image_holders
+            images = Bs4Scraper()._prepare_image_objects(
+                prepare_images_source.current_url_address, prepare_image_holders, ()
             )[0]
         assert images == expected_images
 
@@ -129,8 +130,8 @@ class TestPrepareImageObjects:
         prepare_image_holders: ResultSet,
         prepare_images_source: ImagesSource,
     ):
-        images = Bs4Scraper().prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, ()
         )[0]
         img = sorted(images, key=lambda image: image.created_at, reverse=True)
         assert img[0].created_at > img[1].created_at
@@ -142,9 +143,10 @@ class TestPrepareImageObjects:
         prepare_image_holders: ResultSet,
         prepare_images_source: ImagesSource,
     ):
-        scraper = Bs4Scraper(("https://webludus.pl/img/image.jpg",))
-        images_data = scraper.prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders
+        scraper = Bs4Scraper()
+        last_sync = ("https://webludus.pl/img/image.jpg",)
+        images_data = scraper._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, last_sync
         )
         assert len(images_data[0]) == 0
         assert images_data[1] is True

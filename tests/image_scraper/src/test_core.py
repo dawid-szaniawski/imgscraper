@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Generator
 
 import pytest
 import responses
@@ -11,8 +12,8 @@ from image_scraper.src.models import ImagesSource, Image
 
 @pytest.fixture
 def prepare_image_scraper(
-    prepare_website_data: tuple[str, str, str, int], prepare_image
-) -> ImageScraper:
+    prepare_website_data: tuple[str, str, str, int], prepare_image: Image
+) -> Generator[ImageScraper, None, None]:
     """Returns a mocker of the class inheriting from the Scraper. It contains mocks of
     the basic function of the scraper implementation."""
 
@@ -20,22 +21,33 @@ def prepare_image_scraper(
         """Mocker of the Scraper class.
         It has implementation of all the scraper methods."""
 
-        def __init__(self, last_sync_data: tuple | tuple[str] = ()):
-            self.last_sync_data = last_sync_data
-
         def get_images_data(
-                self, image_source: ImagesSource
+            self,
+            image_source: ImagesSource,
+            last_sync_data: tuple[str] | tuple[()] = (),
         ) -> tuple[set[Image], bool]:
             """The method that starts the synchronization process.
 
             Args:
                 image_source: the ImagesSource object. Contains website data.
+                last_sync_data: URLs of recently downloaded images (img_src).
 
             Returns: set containing dicts with images data:
                 - image source (image page),
                 - url_address (src from image object),
                 - title (alt from image object)."""
-            return {prepare_image, }, False
+            if image_source.current_url_address == "https://webludus.pl/":
+                return {
+                    prepare_image,
+                }, False
+            elif image_source.current_url_address == "https://webludus.pl/page/2":
+                return {
+                    prepare_image,
+                }, False
+            else:
+                return {
+                    prepare_image,
+                }, True
 
         def find_next_page(
             self,
@@ -56,9 +68,15 @@ def prepare_image_scraper(
                     scanned URLs.
 
             Returns: tuple containing the next URL address, and set of scraped URLs."""
-            return "https://webludus.pl/imagocms", {
-                "https://webludus.pl",
-            }
+            if current_url_address == "https://webludus.pl/":
+                return "https://webludus.pl/page/2", {
+                    "https://webludus.pl/",
+                }
+            else:
+                return "https://webludus.pl/page/3", {
+                    "https://webludus.pl/",
+                    "https://webludus.pl/page/2",
+                }
 
     website_url, container_cls, pagination_cls, pages = prepare_website_data
     yield ImageScraper(
@@ -88,7 +106,6 @@ class TestStartSync:
         prepare_image: Image,
     ) -> None:
         prepare_image_scraper.start_sync()
-
         assert prepare_image_scraper.synchronization_data == [prepare_image]
 
 
@@ -97,7 +114,9 @@ class TestSynchronizationDataSetter:
     def test_synchronization_data_should_have_correct_output(
         self, prepare_image: Image, prepare_image_scraper: ImageScraper
     ) -> None:
-        images = [prepare_image]
+        images = [
+            prepare_image,
+        ]
 
         prepare_image_scraper.synchronization_data = images
 
@@ -112,9 +131,9 @@ class TestSynchronizationDataSetter:
         message = "Invalid variable type.\nElement type: <class 'tuple'>."
 
         with pytest.raises(AttributeError, match=message):
-            prepare_image_scraper.synchronization_data = images
+            prepare_image_scraper.synchronization_data = images  # type: ignore
 
-    def test_raise_attribute_error_if_there_are_no_images_in_list(
+    def test_raise_attribute_error_if_there_are_no_images_in_tuple(
         self, prepare_image: Image, prepare_image_scraper: ImageScraper
     ):
         images = [prepare_image, "str"]
@@ -124,7 +143,7 @@ class TestSynchronizationDataSetter:
         )
 
         with pytest.raises(AttributeError, match=message):
-            prepare_image_scraper.synchronization_data = images
+            prepare_image_scraper.synchronization_data = images  # type: ignore
 
 
 @pytest.mark.integtests
@@ -176,7 +195,7 @@ class TestImageScraper:
         )
 
         with freeze_time(creation_time):
-            image_scraper.start_sync()
+            image_scraper.start_sync(("https://webludus.pl/img/last_seen_image.jpg",))
 
         assert images_source_website_page_1.call_count == 2
         assert images_source_website_page_2.call_count == 2
