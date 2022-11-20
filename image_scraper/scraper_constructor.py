@@ -3,16 +3,12 @@ from image_scraper.src.scrapers.bs4_scraper import Bs4Scraper
 
 
 SCRAPERS = {
-    "bs4": Bs4Scraper(),
+    "bs4": Bs4Scraper,
 }
 
 
 def create_image_scraper(
-    website_url: str,
-    container_class: str,
-    pagination_class: str,
-    pages_to_scan: int,
-    scraper: str = "bs4",
+    website_url: str, container_class: str, pagination_class: str, **kwargs
 ) -> ImageScraper:
     """Constructor for the ImageScraper object. Imports scrapers and delivers them to
     ImageScraper based on the information in the scraper variable.
@@ -22,17 +18,28 @@ def create_image_scraper(
         container_class: a class of div or section element containing image
         pagination_class: a class of div or section element containing pagination
             URLs.
-        pages_to_scan: how many pages should be scraped.
-        scraper: tool to be used.
 
     Returns: the ImageScraper object."""
-    if scraper in SCRAPERS:
-        return ImageScraper(
-            website_url=website_url,
-            container_class=container_class,
-            pagination_class=pagination_class,
-            pages_to_scan=pages_to_scan,
-            scraper=SCRAPERS[scraper],
-        )
+    if kwargs.get("pages_to_scan"):
+        if isinstance(kwargs["pages_to_scan"], int):
+            pages_to_scan = kwargs["pages_to_scan"]
+        else:
+            raise ValueError("The page_to_scan value should be INT type.")
     else:
-        raise NameError("This tool is not supported.")
+        pages_to_scan = 1
+
+    if kwargs.get("scraper"):
+        if kwargs["scraper"] in SCRAPERS:
+            scraper = SCRAPERS[kwargs["scraper"]]
+        else:
+            raise ValueError("This tool is not supported.")
+    else:
+        scraper = SCRAPERS["bs4"]
+
+    return ImageScraper(
+        website_url=website_url,
+        container_class=container_class,
+        pagination_class=pagination_class,
+        pages_to_scan=pages_to_scan,
+        scraper=scraper(),
+    )

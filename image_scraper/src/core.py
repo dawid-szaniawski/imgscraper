@@ -31,17 +31,29 @@ class ImageScraper:
         self.scraper = scraper
         self._synchronization_data: list[Image] = []
 
-    def start_sync(self) -> None:
+    def start_sync(self, last_sync_data: tuple[str] | tuple[()] = ()) -> None:
         """Initiates the synchronization process, collecting the data of the images
-        searched according to the provided guidelines."""
+        searched according to the provided guidelines.
+
+        Args:
+            last_sync_data: URLs of recently downloaded images (img_src)."""
         images_data = set()
         scraped_urls = {
             self.image_source.current_url_address,
         }
 
         while self.image_source.pages_to_scan > 0:
-            images_data.update(self.scraper.get_images_data(self.image_source))
-            if self.image_source.pages_to_scan > 1:
+            images, duplication_flag = self.scraper.get_images_data(
+                self.image_source, last_sync_data
+            )
+            images_data.update(images)
+
+            if duplication_flag:
+                self.image_source.pages_to_scan = 0
+            else:
+                self.image_source.pages_to_scan -= 1
+
+            if self.image_source.pages_to_scan > 0:
                 next_page_data = self.scraper.find_next_page(
                     current_url_address=self.image_source.current_url_address,
                     domain=self.image_source.domain,
@@ -49,7 +61,7 @@ class ImageScraper:
                     scraped_urls=scraped_urls,
                 )
                 self.image_source.current_url_address, scraped_urls = next_page_data
-            self.image_source.pages_to_scan -= 1
+
         self.synchronization_data = list(images_data)
 
     @property
@@ -58,16 +70,16 @@ class ImageScraper:
 
     @synchronization_data.setter
     def synchronization_data(self, images: list[Image]) -> None:
-        if isinstance(images, list):
-            index = 0
-            for image in images:
-                if isinstance(image, Image):
-                    self._synchronization_data.append(image)
-                else:
-                    raise AttributeError(
-                        f"Only Image objects can appear in the sync data. "
-                        f"Invalid element index: {index}."
-                    )
-                index += 1
-        else:
-            raise AttributeError("Invalid variable type")
+        if not isinstance(images, list):
+            raise AttributeError(
+                f"Invalid variable type.\nElement type: {type(images)}."
+            )
+        for image in images:
+            if isinstance(image, Image):
+                self._synchronization_data.append(image)
+            else:
+                raise AttributeError(
+                    f"Only Image objects can appear in the sync data.\n"
+                    f"Invalid element: {image}.\n"
+                    f"Invalid element type: {type(image)}."
+                )

@@ -12,7 +12,7 @@ from image_scraper.src.models import Image, ImagesSource
 
 
 @pytest.fixture(scope="session")
-def prepare_beautiful_soup(prepare_html_doc) -> BeautifulSoup:
+def prepare_beautiful_soup(prepare_html_doc: str) -> BeautifulSoup:
     """Prepares the BeautifulSoup object based on prepare_html_doc fixture."""
     yield BeautifulSoup(prepare_html_doc, "html.parser")
 
@@ -30,7 +30,7 @@ class TestGetImagesData:
         )
         get_html_dom_mock.return_value = prepare_beautiful_soup
         prepare_image_objects = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper.prepare_image_objects"
+            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._prepare_image_objects"
         )
 
         Bs4Scraper().get_images_data(image_source=prepare_images_source)
@@ -39,8 +39,9 @@ class TestGetImagesData:
             prepare_images_source.current_url_address
         )
         prepare_image_objects.assert_called_once_with(
-            prepare_images_source.domain,
+            prepare_images_source.current_url_address,
             prepare_beautiful_soup.select("." + prepare_images_source.container_class),
+            tuple(),
         )
 
 
@@ -63,7 +64,7 @@ class TestGetHtmlDom:
         self,
         prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
-        prepare_html_doc,
+        prepare_html_doc: str,
     ) -> None:
         mocked_responses.get(
             prepare_images_source.current_url_address, body=prepare_html_doc
@@ -89,12 +90,14 @@ class TestPrepareImageObjects:
     def test_output_should_be_in_correct_type(
         self, prepare_image_holders: ResultSet, prepare_images_source: ImagesSource
     ) -> None:
-        images = Bs4Scraper().prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, ()
         )
 
-        assert isinstance(images, set)
-        assert isinstance(list(images)[0], Image)
+        assert isinstance(images, tuple)
+        assert isinstance(images[0], set)
+        assert isinstance(images[1], bool)
+        assert isinstance(list(images[0])[0], Image)
 
     def test_output_should_have_correct_data(
         self,
@@ -117,26 +120,49 @@ class TestPrepareImageObjects:
             ),
         }
         with freeze_time(creation_time):
-            images = Bs4Scraper().prepare_image_objects(
-                prepare_images_source.current_url_address, prepare_image_holders
-            )
+            images = Bs4Scraper()._prepare_image_objects(
+                prepare_images_source.current_url_address, prepare_image_holders, ()
+            )[0]
         assert images == expected_images
+
+    def test_first_image_in_document_should_be_most_recent(
+        self,
+        prepare_image_holders: ResultSet,
+        prepare_images_source: ImagesSource,
+    ):
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, ()
+        )[0]
+        img = sorted(images, key=lambda image: image.created_at, reverse=True)
+        assert img[0].created_at > img[1].created_at
+        assert img[0].title == "Webludus"
+        assert img[1].title == "Image 01"
+
+    def test_stop_scraping_if_image_is_in_last_sync_data(
+        self,
+        prepare_image_holders: ResultSet,
+        prepare_images_source: ImagesSource,
+    ):
+        scraper = Bs4Scraper()
+        last_sync = ("https://webludus.pl/img/image.jpg",)
+        images_data = scraper._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders, last_sync
+        )
+        assert len(images_data[0]) == 0
+        assert images_data[1] is True
 
 
 @pytest.mark.unittests
 class TestFindImageData:
     def test_happy_path(self, prepare_second_html_doc: str) -> None:
         div = BeautifulSoup(prepare_second_html_doc, "html.parser").div
-        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
-        expected_image = Image(
-            source="https://webludus.pl/02",
-            url_address="https://webludus.pl/img/image02.jpg",
-            title="Image 02",
-            created_at=creation_time,
+        expected_image_data = (
+            "https://webludus.pl/02",
+            "https://webludus.pl/img/image02.jpg",
+            "Image 02",
         )
-        with freeze_time(creation_time):
-            image = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
-        assert image == expected_image
+        image_data = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
+        assert image_data == expected_image_data
 
     def test_in_case_of_key_error_return_none(self) -> None:
         div_data = """

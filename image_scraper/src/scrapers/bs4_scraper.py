@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from requests import get
 from bs4 import BeautifulSoup
@@ -11,16 +11,21 @@ from image_scraper.src.scrapers.scraper import Scraper
 class Bs4Scraper(Scraper):
     """Scans websites for images and returns data about them."""
 
-    def get_images_data(self, image_source: ImagesSource) -> set[Image]:
+    def get_images_data(
+        self, image_source: ImagesSource, last_sync_data: tuple[str] | tuple[()] = ()
+    ) -> tuple[set[Image], bool]:
         """Method that starts the synchronization process.
 
         Args:
             image_source: the ImagesSource object. Contains website data.
+            last_sync_data: URLs of recently downloaded images (img_src).
 
-        Returns: set containing the Image objects."""
+        Returns: a tuple in which there is a set with Image objects and bool."""
         html_dom = self._get_html_dom(image_source.current_url_address)
-        return self.prepare_image_objects(
-            image_source.domain, html_dom.select("." + image_source.container_class)
+        return self._prepare_image_objects(
+            image_source.domain,
+            html_dom.select("." + image_source.container_class),
+            last_sync_data,
         )
 
     @staticmethod
@@ -35,25 +40,49 @@ class Bs4Scraper(Scraper):
         request = get(url_address)
         return BeautifulSoup(request.text, "html.parser")
 
-    def prepare_image_objects(
-        self, domain: str, image_holders: ResultSet
-    ) -> set[Image]:
+    def _prepare_image_objects(
+        self,
+        domain: str,
+        image_holders: ResultSet,
+        last_sync_data: tuple[str] | tuple[()] = (),
+    ) -> tuple[set[Image], bool]:
         """Iterates over ResultSet of image holders and add images into a set.
+        If it hits a previously scanned image, stops the iterations and returns True
+        as the second argument.
 
         Args:
             domain: domain of the scraped website.
             image_holders: ResultSet object containing the images' data.
+            last_sync_data: URLs of recently downloaded images (img_src).
 
-        Returns: set containing the Image objects."""
+        Returns: a tuple in which there is a set with Image objects and bool."""
         images = set()
+        duplicates = False
+        time = timedelta(minutes=0)
 
         for div in image_holders:
-            image = self._find_image_data(div, domain)
-            if image:
-                images.add(image)
-        return images
+            image_data = self._find_image_data(div, domain)
 
-    def _find_image_data(self, div: Tag, domain: str) -> Image | None:
+            if not image_data:
+                continue
+
+            if image_data[1] in last_sync_data:
+                duplicates = True
+                break
+
+            images.add(
+                Image(
+                    source=image_data[0],
+                    url_address=image_data[1],
+                    title=image_data[2],
+                    created_at=datetime.now() - time,
+                )
+            )
+            time += timedelta(minutes=1)
+
+        return images, duplicates
+
+    def _find_image_data(self, div: Tag, domain: str) -> tuple[str, str, str] | None:
         """Searches the Tag object for image-related data: source link, image source,
         and image description (alt).
 
@@ -68,18 +97,14 @@ class Bs4Scraper(Scraper):
             image_source = self.add_domain_into_url_address(
                 domain, div.find("a")["href"]
             )
-            image_src = self.add_domain_into_url_address(domain, image["src"])
-            if image_src[-4] == "." or image_src[-5] == ".":
-                return Image(
-                    source=image_source,
-                    url_address=image_src,
-                    title=image["alt"],
-                    created_at=datetime.now(),
-                )
+            img_src = self.add_domain_into_url_address(domain, image["src"])
+
+            if img_src[-4] == "." or img_src[-5] == ".":
+                return image_source, img_src, image["alt"]
+
             return None
-        except TypeError:
-            return None
-        except KeyError:
+
+        except (TypeError, KeyError):
             return None
 
     def find_next_page(
