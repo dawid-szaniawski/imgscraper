@@ -15,6 +15,9 @@ class Bs4Scraper(Scraper):
         self, image_source: ImagesSource, last_sync_data: tuple[str] | tuple[()] = ()
     ) -> tuple[set[Image], bool]:
         """Method that starts the synchronization process.
+        If, during synchronization, encounters an image located in last_sync_data,
+        it stops synchronization and returns True as the second argument.
+        If the synchronization is complete, the second argument will be False.
 
         Args:
             image_source: the ImagesSource object. Contains website data.
