@@ -14,7 +14,7 @@ from image_scraper.src.models import Image, ImagesSource
 @pytest.fixture(scope="session")
 def prepare_beautiful_soup(prepare_html_doc: str) -> BeautifulSoup:
     """Prepares the BeautifulSoup object based on prepare_html_doc fixture."""
-    yield BeautifulSoup(prepare_html_doc, "html.parser")
+    return BeautifulSoup(prepare_html_doc, "html.parser")
 
 
 @pytest.mark.unittests
@@ -79,13 +79,25 @@ class TestGetHtmlDom:
 
 @pytest.mark.integtests
 class TestPrepareImageObjects:
-    @pytest.fixture
+    @pytest.fixture(scope="class")
     def prepare_image_holders(
         self, prepare_beautiful_soup: BeautifulSoup, prepare_images_source: ImagesSource
     ) -> ResultSet:
         """Prepares a ResultSet containing all of divs that have image inside.
         For this, it uses prepare_beautiful_soup and prepare_images_source fixture."""
-        yield prepare_beautiful_soup.select("." + prepare_images_source.container_class)
+        return prepare_beautiful_soup.select(
+            "." + prepare_images_source.container_class
+        )
+
+    @pytest.fixture(scope="class")
+    def prepare_second_image_holders(
+        self, prepare_second_html_doc: str, prepare_images_source: ImagesSource
+    ) -> ResultSet:
+        """Prepares a ResultSet containing all of divs that have image inside.
+        For this, it uses prepare_second_html_doc and prepare_images_source fixture."""
+        return BeautifulSoup(prepare_second_html_doc, "html.parser").select(
+            "." + prepare_images_source.container_class
+        )
 
     def test_output_should_be_in_correct_type(
         self, prepare_image_holders: ResultSet, prepare_images_source: ImagesSource
@@ -128,15 +140,32 @@ class TestPrepareImageObjects:
     def test_first_image_in_document_should_be_most_recent(
         self,
         prepare_image_holders: ResultSet,
+        prepare_second_image_holders,
         prepare_images_source: ImagesSource,
     ):
-        images = Bs4Scraper()._prepare_image_objects(
+        scraper = Bs4Scraper()
+        images = scraper._prepare_image_objects(
             prepare_images_source.current_url_address, prepare_image_holders, ()
         )[0]
+        images = images.union(
+            scraper._prepare_image_objects(
+                prepare_images_source.current_url_address,
+                prepare_second_image_holders,
+                (),
+            )[0]
+        )
         img = sorted(images, key=lambda image: image.created_at, reverse=True)
-        assert img[0].created_at > img[1].created_at
+        assert img[0].created_at > img[-1].created_at
         assert img[0].title == "Webludus"
+        assert img[0].source == "https://webludus.pl/00"
+        assert img[0].url_address == "https://webludus.pl/img/image.jpg"
+        assert img[0].created_at > img[-1].created_at
         assert img[1].title == "Image 01"
+        assert img[1].source == "https://webludus.pl/01"
+        assert img[1].url_address == "https://webludus.pl/img/image01.jpg"
+        assert img[-1].title == "Image"
+        assert img[-1].source == "https://webludus.pl/02"
+        assert img[-1].url_address == "https://webludus.pl/img/last_seen_image.jpg"
 
     def test_stop_scraping_if_image_is_in_last_sync_data(
         self,

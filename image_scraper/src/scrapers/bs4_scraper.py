@@ -11,6 +11,8 @@ from image_scraper.src.scrapers.scraper import Scraper
 class Bs4Scraper(Scraper):
     """Scans websites for images and returns data about them."""
 
+    time = timedelta(minutes=0)
+
     def get_images_data(
         self, image_source: ImagesSource, last_sync_data: tuple[str] | tuple[()] = ()
     ) -> tuple[set[Image], bool]:
@@ -61,7 +63,6 @@ class Bs4Scraper(Scraper):
         Returns: a tuple in which there is a set with Image objects and bool."""
         images = set()
         duplicates = False
-        time = timedelta(minutes=0)
 
         for div in image_holders:
             image_data = self._find_image_data(div, domain)
@@ -78,10 +79,10 @@ class Bs4Scraper(Scraper):
                     source=image_data[0],
                     url_address=image_data[1],
                     title=image_data[2],
-                    created_at=datetime.now() - time,
+                    created_at=datetime.now() - self.time,
                 )
             )
-            time += timedelta(minutes=1)
+            self.time += timedelta(minutes=1)
 
         return images, duplicates
 
