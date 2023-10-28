@@ -1,91 +1,10 @@
-from datetime import datetime
-from typing import Generator
-
 import pytest
 import responses
-from freezegun import freeze_time
+from requests import Session
 
-from image_scraper.src.core import ImageScraper
-from image_scraper.src.scrapers import scraper, bs4_scraper
-from image_scraper.src.models import ImagesSource, Image
-
-
-@pytest.fixture
-def prepare_image_scraper(
-    prepare_website_data: tuple[str, str, str, int], prepare_image: Image
-) -> Generator[ImageScraper, None, None]:
-    """Returns a mocker of the class inheriting from the Scraper. It contains mocks of
-    the basic function of the scraper implementation."""
-
-    class ScraperMocker(scraper.Scraper):
-        """Mocker of the Scraper class.
-        It has implementation of all the scraper methods."""
-
-        def get_images_data(
-            self,
-            image_source: ImagesSource,
-            last_sync_data: tuple[str] | tuple[()] = (),
-        ) -> tuple[set[Image], bool]:
-            """The method that starts the synchronization process.
-
-            Args:
-                image_source: the ImagesSource object. Contains website data.
-                last_sync_data: URLs of recently downloaded images (img_src).
-
-            Returns: set containing dicts with images data:
-                - image source (image page),
-                - url_address (src from image object),
-                - title (alt from image object)."""
-            if image_source.current_url_address == "https://webludus.pl/":
-                return {
-                    prepare_image,
-                }, False
-            elif image_source.current_url_address == "https://webludus.pl/page/2":
-                return {
-                    prepare_image,
-                }, False
-            else:
-                return {
-                    prepare_image,
-                }, True
-
-        def find_next_page(
-            self,
-            current_url_address: str,
-            domain: str,
-            pagination_class: str,
-            scraped_urls: set[str],
-        ) -> tuple[str, set[str]]:
-            """Search the HTML DOM for the next page URL address.
-
-            Args:
-                current_url_address: URL address of the website to scan for the next
-                    page.
-                domain: domain and protocol of the website to scan for the next page.
-                pagination_class: a class of div or section element containing
-                    pagination URLs.
-                scraped_urls: to avoid duplicates, it is required to provide previously
-                    scanned URLs.
-
-            Returns: tuple containing the next URL address, and set of scraped URLs."""
-            if current_url_address == "https://webludus.pl/":
-                return "https://webludus.pl/page/2", {
-                    "https://webludus.pl/",
-                }
-            else:
-                return "https://webludus.pl/page/3", {
-                    "https://webludus.pl/",
-                    "https://webludus.pl/page/2",
-                }
-
-    website_url, container_cls, pagination_cls, pages = prepare_website_data
-    yield ImageScraper(
-        website_url=website_url,
-        container_class=container_cls,
-        pagination_class=pagination_cls,
-        pages_to_scan=pages,
-        scraper=ScraperMocker(),
-    )
+from imgscraper.src.core import ImageScraper
+from imgscraper.src.models import Image, ImagesSource
+from imgscraper.src.scrapers import bs4_scraper, scraper
 
 
 @pytest.mark.unittests
@@ -114,9 +33,7 @@ class TestSynchronizationDataSetter:
     def test_synchronization_data_should_have_correct_output(
         self, prepare_image: Image, prepare_image_scraper: ImageScraper
     ) -> None:
-        images = [
-            prepare_image,
-        ]
+        images = [prepare_image]
 
         prepare_image_scraper.synchronization_data = images
 
@@ -154,6 +71,7 @@ class TestImageScraper:
         mocked_responses: responses.RequestsMock,
         prepare_html_doc: str,
         prepare_second_html_doc: str,
+        anonymous_session: Session,
     ):
         website_url, container_class, pagination_class, pages = prepare_website_data
         images_source_website_page_1 = mocked_responses.get(
@@ -165,25 +83,21 @@ class TestImageScraper:
         images_source_website_page_3 = mocked_responses.get(
             website_url + "page/3", body=prepare_second_html_doc
         )
-        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
         expected_sync_data = [
-            Image(
-                source="https://webludus.pl/00",
-                title="Webludus",
-                url_address="https://webludus.pl/img/image.jpg",
-                created_at=creation_time,
-            ),
             Image(
                 source="https://webludus.pl/01",
                 title="Image 01",
                 url_address="https://webludus.pl/img/image01.jpg",
-                created_at=creation_time,
             ),
             Image(
                 source="https://webludus.pl/02",
                 title="Image 02",
                 url_address="https://webludus.pl/img/image02.jpg",
-                created_at=creation_time,
+            ),
+            Image(
+                source="https://webludus.pl/00",
+                title="Webludus",
+                url_address="https://webludus.pl/img/image.jpg",
             ),
         ]
         image_scraper = ImageScraper(
@@ -192,13 +106,11 @@ class TestImageScraper:
             pagination_class=pagination_class,
             pages_to_scan=pages,
             scraper=bs4_scraper.Bs4Scraper(),
+            session=anonymous_session,
         )
 
-        with freeze_time(creation_time):
-            image_scraper.start_sync(("https://webludus.pl/img/last_seen_image.jpg",))
-
+        image_scraper.start_sync(("https://webludus.pl/img/last_seen_image.jpg",))
         assert images_source_website_page_1.call_count == 2
         assert images_source_website_page_2.call_count == 2
         assert images_source_website_page_3.call_count == 1
-        assert len(image_scraper.synchronization_data) == len(expected_sync_data)
-        assert set(image_scraper.synchronization_data) == set(expected_sync_data)
+        assert image_scraper.synchronization_data == expected_sync_data

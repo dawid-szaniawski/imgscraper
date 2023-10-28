@@ -1,9 +1,12 @@
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
+
+from requests import Session
 
 
 @dataclass
 class ImagesSource:
+    session: Session
     current_url_address: str
     container_class: str
     pagination_class: str
@@ -18,7 +21,6 @@ class Image:
     source: str
     url_address: str
     title: str
-    created_at: datetime
 
     def __eq__(self, other):
         if other.__class__ is self.__class__:

@@ -1,13 +1,17 @@
-from image_scraper.src.core import ImageScraper
-from image_scraper.src.scrapers.bs4_scraper import Bs4Scraper
+from logging import getLogger
 
+from requests import Session
 
+from imgscraper.src.core import ImageScraper
+from imgscraper.src.scrapers.bs4_scraper import Bs4Scraper
+
+log = getLogger(__name__)
 SCRAPERS = {
     "bs4": Bs4Scraper,
 }
 
 
-def create_image_scraper(
+def create_scraper(
     website_url: str, container_class: str, pagination_class: str, **kwargs
 ) -> ImageScraper:
     """Constructor for the ImageScraper object. Imports scrapers and delivers them to
@@ -20,26 +24,24 @@ def create_image_scraper(
             URLs.
 
     Returns: the ImageScraper object."""
-    if kwargs.get("pages_to_scan"):
-        if isinstance(kwargs["pages_to_scan"], int):
-            pages_to_scan = kwargs["pages_to_scan"]
-        else:
-            raise ValueError("The page_to_scan value should be INT type.")
-    else:
-        pages_to_scan = 1
+    pages_to_scan = kwargs.get("pages_to_scan", 1)
+    if not isinstance(pages_to_scan, int):
+        raise ValueError("The page_to_scan value should be INT type.")
 
-    if kwargs.get("scraper"):
-        if kwargs["scraper"] in SCRAPERS:
-            scraper = SCRAPERS[kwargs["scraper"]]
-        else:
-            raise ValueError("This tool is not supported.")
-    else:
-        scraper = SCRAPERS["bs4"]
+    scraper = kwargs.get("scraper", "bs4")
+    if scraper not in SCRAPERS:
+        raise ValueError("This tool is not supported.")
+
+    session = kwargs.get("session", None)
+    if not isinstance(session, Session):
+        log.info("No valid Session object found. Creating a new one...")
+        session = Session()
 
     return ImageScraper(
         website_url=website_url,
         container_class=container_class,
         pagination_class=pagination_class,
         pages_to_scan=pages_to_scan,
-        scraper=scraper(),
+        scraper=SCRAPERS[scraper](),
+        session=session,
     )

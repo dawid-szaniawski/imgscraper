@@ -1,5 +1,11 @@
-from image_scraper.src.models import ImagesSource, Image
-from image_scraper.src.scrapers.scraper import Scraper
+from logging import getLogger
+
+from requests import Session
+
+from imgscraper.src.models import Image, ImagesSource
+from imgscraper.src.scrapers.scraper import Scraper
+
+log = getLogger(__name__)
 
 
 class ImageScraper:
@@ -12,6 +18,7 @@ class ImageScraper:
         pagination_class: str,
         pages_to_scan: int,
         scraper: Scraper,
+        session: Session,
     ) -> None:
         """Constructor.
 
@@ -27,17 +34,18 @@ class ImageScraper:
             container_class=container_class,
             pagination_class=pagination_class,
             pages_to_scan=pages_to_scan,
+            session=session,
         )
         self.scraper = scraper
         self._synchronization_data: list[Image] = []
 
-    def start_sync(self, last_sync_data: tuple[str] | tuple[()] = ()) -> None:
+    def start_sync(self, last_sync_data: tuple[str] | None = None) -> None:
         """Initiates the synchronization process, collecting the data of the images
         searched according to the provided guidelines.
 
         Args:
             last_sync_data: URLs of recently downloaded images (img_src)."""
-        images_data = set()
+        images_data: list[Image] = []
         scraped_urls = {
             self.image_source.current_url_address,
         }
@@ -46,7 +54,7 @@ class ImageScraper:
             images, duplication_flag = self.scraper.get_images_data(
                 self.image_source, last_sync_data
             )
-            images_data.update(images)
+            images_data.extend(images)
 
             if duplication_flag:
                 self.image_source.pages_to_scan = 0
@@ -55,14 +63,13 @@ class ImageScraper:
 
             if self.image_source.pages_to_scan > 0:
                 next_page_data = self.scraper.find_next_page(
-                    current_url_address=self.image_source.current_url_address,
-                    domain=self.image_source.domain,
-                    pagination_class=self.image_source.pagination_class,
+                    img_source=self.image_source,
                     scraped_urls=scraped_urls,
                 )
                 self.image_source.current_url_address, scraped_urls = next_page_data
 
-        self.synchronization_data = list(images_data)
+        log.info("Synchronization completed. Scraped urls: %s", scraped_urls)
+        self.synchronization_data = images_data
 
     @property
     def synchronization_data(self) -> list[Image]:
@@ -74,7 +81,12 @@ class ImageScraper:
             raise AttributeError(
                 f"Invalid variable type.\nElement type: {type(images)}."
             )
+
+        images.reverse()
         for image in images:
+            if image in self._synchronization_data:
+                continue
+
             if isinstance(image, Image):
                 self._synchronization_data.append(image)
             else:

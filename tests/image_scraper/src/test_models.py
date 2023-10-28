@@ -1,18 +1,21 @@
-from datetime import datetime
-
 from pytest import mark
+from requests import Session
 
-from image_scraper.src.models import ImagesSource, Image
+from imgscraper.src.models import Image, ImagesSource
 
 
 @mark.unittests
 class TestImageSource:
     def test_image_source_domain_should_have_correct_data(
-        self, prepare_images_source: ImagesSource
+        self, prepare_images_source: ImagesSource, anonymous_session: Session
     ) -> None:
         image_source = prepare_images_source
 
         assert image_source.domain == "https://webludus.pl/"
+        assert image_source.container_class == "simple-image"
+        assert image_source.pagination_class == "pagination"
+        assert image_source.pages_to_scan == 4
+        assert image_source.session == anonymous_session
 
 
 @mark.unittests
@@ -26,14 +29,11 @@ class TestImage:
         assert image.as_dict() == prepare_image_model_data
 
     def test_object_comparison_should_be_done_only_in_the_url_address_field(self):
-        dt = datetime(2022, 10, 12, 14, 28, 21, 720446)
-        image1 = Image(source="1", url_address="1", title="1", created_at=dt)
-        image2 = Image(source="2", url_address="1", title="2", created_at=dt)
-        image3 = Image(
-            source="2", url_address="2", title="2", created_at=datetime.now()
-        )
-        image4 = Image(source="1", url_address="2", title="1", created_at=dt)
-        image5 = Image(source="1", url_address="3", title="1", created_at=dt)
+        image1 = Image(source="1", url_address="1", title="1")
+        image2 = Image(source="2", url_address="1", title="2")
+        image3 = Image(source="2", url_address="2", title="2")
+        image4 = Image(source="1", url_address="2", title="1")
+        image5 = Image(source="1", url_address="3", title="1")
         images = {image1, image2, image3, image4, image5}
         unique_images = {image1, image3, image5}
 
