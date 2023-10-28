@@ -1,9 +1,0 @@
-pytest==7.2.0
-pytest-mock==3.10.0
-pytest-cov==4.0.0
-black==22.10.0
-flake8==5.0.4
-mypy==0.991
-tox==3.27.1
-responses==0.22.0
-freezegun==1.2.2

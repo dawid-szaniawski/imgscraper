@@ -1,14 +1,11 @@
-from datetime import datetime
-
 import pytest
 import responses
-from freezegun import freeze_time
+from bs4 import BeautifulSoup, ResultSet
 from pytest_mock import MockerFixture
-from bs4 import BeautifulSoup
-from bs4.element import ResultSet
+from requests import Session
 
-from image_scraper.src.scrapers.bs4_scraper import Bs4Scraper
-from image_scraper.src.models import Image, ImagesSource
+from imgscraper.src.models import Image, ImagesSource
+from imgscraper.src.scrapers.bs4_scraper import Bs4Scraper
 
 
 @pytest.fixture(scope="session")
@@ -26,22 +23,25 @@ class TestGetImagesData:
         prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
         get_html_dom_mock = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "imgscraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom_mock.return_value = prepare_beautiful_soup
         prepare_image_objects = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._prepare_image_objects"
+            "imgscraper.src.scrapers.bs4_scraper.Bs4Scraper._prepare_image_objects"
         )
 
-        Bs4Scraper().get_images_data(image_source=prepare_images_source)
+        Bs4Scraper().get_images_data(img_source=prepare_images_source)
 
         get_html_dom_mock.assert_called_once_with(
-            prepare_images_source.current_url_address
+            session=prepare_images_source.session,
+            url_address=prepare_images_source.current_url_address,
         )
         prepare_image_objects.assert_called_once_with(
-            prepare_images_source.current_url_address,
-            prepare_beautiful_soup.select("." + prepare_images_source.container_class),
-            tuple(),
+            domain=prepare_images_source.current_url_address,
+            image_holders=prepare_beautiful_soup.select(
+                "." + prepare_images_source.container_class
+            ),
+            last_sync_data=None,
         )
 
 
@@ -51,12 +51,16 @@ class TestGetHtmlDom:
         self,
         prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
+        anonymous_session: Session,
     ) -> None:
         images_source_website = mocked_responses.get(
             prepare_images_source.current_url_address
         )
 
-        Bs4Scraper._get_html_dom(prepare_images_source.current_url_address)
+        Bs4Scraper._get_html_dom(
+            session=anonymous_session,
+            url_address=prepare_images_source.current_url_address,
+        )
 
         assert images_source_website.call_count == 1
 
@@ -65,13 +69,15 @@ class TestGetHtmlDom:
         prepare_images_source: ImagesSource,
         mocked_responses: responses.RequestsMock,
         prepare_html_doc: str,
+        anonymous_session: Session,
     ) -> None:
         mocked_responses.get(
             prepare_images_source.current_url_address, body=prepare_html_doc
         )
 
         beautiful_soup = Bs4Scraper._get_html_dom(
-            prepare_images_source.current_url_address
+            session=anonymous_session,
+            url_address=prepare_images_source.current_url_address,
         )
 
         assert isinstance(beautiful_soup, BeautifulSoup)
@@ -103,69 +109,78 @@ class TestPrepareImageObjects:
         self, prepare_image_holders: ResultSet, prepare_images_source: ImagesSource
     ) -> None:
         images = Bs4Scraper()._prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders, ()
+            prepare_images_source.current_url_address, prepare_image_holders
         )
 
         assert isinstance(images, tuple)
-        assert isinstance(images[0], set)
+        assert isinstance(images[0], list)
         assert isinstance(images[1], bool)
-        assert isinstance(list(images[0])[0], Image)
+        assert isinstance(images[0][0], Image)
 
     def test_output_should_have_correct_data(
         self,
         prepare_image_holders: ResultSet,
         prepare_images_source: ImagesSource,
     ) -> None:
-        creation_time = datetime(2022, 10, 12, 14, 28, 21, 720446)
-        expected_images = {
+        expected_images = [
             Image(
                 source="https://webludus.pl/00",
                 url_address="https://webludus.pl/img/image.jpg",
                 title="Webludus",
-                created_at=creation_time,
             ),
             Image(
                 source="https://webludus.pl/01",
                 url_address="https://webludus.pl/img/image01.jpg",
                 title="Image 01",
-                created_at=creation_time,
             ),
-        }
-        with freeze_time(creation_time):
-            images = Bs4Scraper()._prepare_image_objects(
-                prepare_images_source.current_url_address, prepare_image_holders, ()
-            )[0]
+            Image(
+                source="https://webludus.pl/01",
+                url_address="https://webludus.pl/img/image01.jpg",
+                title="Image 01",
+            ),
+        ]
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, prepare_image_holders
+        )[0]
         assert images == expected_images
+
+    def test_output_should_have_all_images(
+        self, prepare_images_source: ImagesSource, multiple_nested_images: ResultSet
+    ):
+        expected = [
+            Image(
+                source="https://webludus.pl/10",
+                url_address="https://webludus.pl/img/img100.jpg",
+                title="Image 100",
+            ),
+            Image(
+                source="https://webludus.pl/10",
+                url_address="https://webludus.pl/img/img099.jpg",
+                title="Image 099",
+            ),
+        ]
+        images = Bs4Scraper()._prepare_image_objects(
+            prepare_images_source.current_url_address, multiple_nested_images
+        )[0]
+        assert images == expected
 
     def test_first_image_in_document_should_be_most_recent(
         self,
         prepare_image_holders: ResultSet,
-        prepare_second_image_holders,
         prepare_images_source: ImagesSource,
     ):
         scraper = Bs4Scraper()
-        images = scraper._prepare_image_objects(
-            prepare_images_source.current_url_address, prepare_image_holders, ()
+        img = scraper._prepare_image_objects(
+            domain=prepare_images_source.current_url_address,
+            image_holders=prepare_image_holders,
         )[0]
-        images = images.union(
-            scraper._prepare_image_objects(
-                prepare_images_source.current_url_address,
-                prepare_second_image_holders,
-                (),
-            )[0]
-        )
-        img = sorted(images, key=lambda image: image.created_at, reverse=True)
-        assert img[0].created_at > img[-1].created_at
+
         assert img[0].title == "Webludus"
         assert img[0].source == "https://webludus.pl/00"
         assert img[0].url_address == "https://webludus.pl/img/image.jpg"
-        assert img[0].created_at > img[-1].created_at
-        assert img[1].title == "Image 01"
-        assert img[1].source == "https://webludus.pl/01"
-        assert img[1].url_address == "https://webludus.pl/img/image01.jpg"
-        assert img[-1].title == "Image"
-        assert img[-1].source == "https://webludus.pl/02"
-        assert img[-1].url_address == "https://webludus.pl/img/last_seen_image.jpg"
+        assert img[-1].title == "Image 01"
+        assert img[-1].source == "https://webludus.pl/01"
+        assert img[-1].url_address == "https://webludus.pl/img/image01.jpg"
 
     def test_stop_scraping_if_image_is_in_last_sync_data(
         self,
@@ -185,12 +200,14 @@ class TestPrepareImageObjects:
 class TestFindImageData:
     def test_happy_path(self, prepare_second_html_doc: str) -> None:
         div = BeautifulSoup(prepare_second_html_doc, "html.parser").div
-        expected_image_data = (
-            "https://webludus.pl/02",
-            "https://webludus.pl/img/image02.jpg",
-            "Image 02",
-        )
-        image_data = Bs4Scraper()._find_image_data(div, "https://webludus.pl/")
+        expected_image_data = [
+            (
+                "https://webludus.pl/02",
+                "https://webludus.pl/img/image02.jpg",
+                "Image 02",
+            )
+        ]
+        image_data = Bs4Scraper()._find_images_data(div, "https://webludus.pl/")
         assert image_data == expected_image_data
 
     def test_in_case_of_key_error_return_none(self) -> None:
@@ -200,12 +217,12 @@ class TestFindImageData:
                 <img src="https://webludus.pl/img/image.jpg">
             </a></div>"""
         div = BeautifulSoup(div_data, "html.parser").div
-        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
+        assert Bs4Scraper()._find_images_data(div, "https://webludus.pl/") is None
 
     def test_in_case_of_type_error_return_none(self) -> None:
         div_data = """<div class="simple-image"></div>"""
         div = BeautifulSoup(div_data, "html.parser").div
-        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
+        assert Bs4Scraper()._find_images_data(div, "https://webludus.pl/") is None
 
     def test_if_there_is_no_extension_in_img_src_return_none(self):
         div_data = """
@@ -215,7 +232,7 @@ class TestFindImageData:
             </a></div>"""
         soup = BeautifulSoup(div_data, "html.parser")
         div = soup.div
-        assert Bs4Scraper()._find_image_data(div, "https://webludus.pl/") is None
+        assert Bs4Scraper()._find_images_data(div, "https://webludus.pl/") is None
 
 
 @pytest.mark.integtests
@@ -227,19 +244,18 @@ class TestFindNextPage:
         prepare_beautiful_soup: BeautifulSoup,
     ) -> None:
         get_html_dom = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "imgscraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = prepare_beautiful_soup
 
         next_url, scraped_urls = Bs4Scraper().find_next_page(
-            prepare_images_source.current_url_address,
-            prepare_images_source.domain,
-            prepare_images_source.pagination_class,
-            set(),
+            img_source=prepare_images_source,
+            scraped_urls=set(),
         )
 
         assert next_url == "https://webludus.pl/page/2"
         assert scraped_urls == {
+            "#",
             "https://webludus.pl",
             "https://webludus.pl/",
             "https://webludus.pl/#",
@@ -260,16 +276,14 @@ class TestFindNextPage:
             <a href="https://webludus.pl/page/1">1</a>
         </div>"""
         get_html_dom = mocker.patch(
-            "image_scraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
+            "imgscraper.src.scrapers.bs4_scraper.Bs4Scraper._get_html_dom"
         )
         get_html_dom.return_value = BeautifulSoup(html_doc, "html.parser")
 
         with pytest.raises(IndexError):
             Bs4Scraper().find_next_page(
-                prepare_images_source.current_url_address,
-                prepare_images_source.domain,
-                prepare_images_source.pagination_class,
-                set(),
+                img_source=prepare_images_source,
+                scraped_urls=set(),
             )
 
 

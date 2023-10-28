@@ -1,7 +1,7 @@
 import pytest
 
-from image_scraper.scraper_constructor import create_image_scraper
-from image_scraper.src.scrapers.bs4_scraper import Bs4Scraper
+from imgscraper.scraper_constructor import create_scraper
+from imgscraper.src.scrapers.bs4_scraper import Bs4Scraper
 
 
 @pytest.mark.integtests
@@ -9,9 +9,8 @@ class TestCreateImageScraper:
     def test_happy_path_without_kwargs(
         self, prepare_website_data: tuple[str, str, str, int]
     ) -> None:
-        website_url, container_class, pagination_class, pages = prepare_website_data
-
-        scraper = create_image_scraper(
+        website_url, container_class, pagination_class = prepare_website_data[:3]
+        scraper = create_scraper(
             website_url,
             container_class,
             pagination_class,
@@ -29,7 +28,7 @@ class TestCreateImageScraper:
     ) -> None:
         website_url, container_class, pagination_class, pages = prepare_website_data
 
-        scraper = create_image_scraper(
+        scraper = create_scraper(
             website_url,
             container_class,
             pagination_class,
@@ -47,10 +46,10 @@ class TestCreateImageScraper:
     def test_raise_value_error_scraper_is_not_supported(
         self, prepare_website_data: tuple[str, str, str, int]
     ):
-        website_url, container_class, pagination_class, pages = prepare_website_data
+        website_url, container_class, pagination_class = prepare_website_data[:3]
 
         with pytest.raises(ValueError, match="This tool is not supported."):
-            create_image_scraper(
+            create_scraper(
                 website_url,
                 container_class,
                 pagination_class,
@@ -60,11 +59,11 @@ class TestCreateImageScraper:
     def test_raise_value_error_pages_to_scan_is_not_int_type(
         self, prepare_website_data: tuple[str, str, str, int]
     ):
-        website_url, container_class, pagination_class, pages = prepare_website_data
+        website_url, container_class, pagination_class = prepare_website_data[:3]
         msg = "The page_to_scan value should be INT type."
 
         with pytest.raises(ValueError, match=msg):
-            create_image_scraper(
+            create_scraper(
                 website_url,
                 container_class,
                 pagination_class,
