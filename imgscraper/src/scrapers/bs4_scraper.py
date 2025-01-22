@@ -2,7 +2,7 @@ from logging import getLogger
 
 from bepatient import wait_for_value_in_request
 from bs4 import BeautifulSoup, ResultSet, Tag
-from requests import PreparedRequest, Session
+from requests import Session
 
 from imgscraper.src.models import Image, ImagesSource
 from imgscraper.src.scrapers.scraper import Scraper
