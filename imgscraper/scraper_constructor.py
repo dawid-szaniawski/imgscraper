@@ -36,6 +36,7 @@ def create_scraper(
     if not isinstance(session, Session):
         log.info("No valid Session object found. Creating a new one...")
         session = Session()
+        session.headers = {"User-Agent": "scrapper"}
 
     return ImageScraper(
         website_url=website_url,

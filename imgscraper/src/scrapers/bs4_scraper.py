@@ -44,9 +44,9 @@ class Bs4Scraper(Scraper):
             url_address: string containing URL of scraped website.
 
         Returns: BeautifulSoup object containing HTML DOM."""
-        request = PreparedRequest()
-        request.prepare(method="get", url=url_address)
-        text_response = wait_for_value_in_request(request=request, session=session).text
+        text_response = wait_for_value_in_request(
+            request=session.get(url=url_address), session=session
+        ).text
         return BeautifulSoup(text_response, "html.parser")
 
     def _prepare_image_objects(
